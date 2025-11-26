@@ -1,15 +1,28 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-
-st.set_page_config(page_title="실험 기록하기", page_icon="🧪")
+import os
 
 st.markdown("# 🌿 식물 성장 관찰일지 기록하기")
 st.sidebar.header("실험 기록하기")
 
 # 세션 상태에 데이터프레임 초기화
+# --- 데이터 저장 및 불러오기 기능 추가 ---
+DATA_FILE = "plant_data.csv"
+
+# 앱 시작 시 파일에서 데이터 불러오기
+def load_data():
+    if os.path.exists(DATA_FILE):
+        return pd.read_csv(DATA_FILE)
+    return pd.DataFrame(columns=["날짜", "그룹", "식물 키(cm)", "메모"])
+
+# 세션 상태에 데이터프레임 초기화 (파일에서 불러온 데이터 사용)
 if 'plant_data' not in st.session_state:
-    st.session_state.plant_data = pd.DataFrame(columns=["날짜", "그룹", "식물 키(cm)", "메모"])
+    st.session_state.plant_data = load_data()
+
+# 데이터 파일에 저장하기
+def save_data():
+    st.session_state.plant_data.to_csv(DATA_FILE, index=False)
 
 st.subheader("오늘의 관찰 결과 입력")
 
@@ -31,6 +44,7 @@ with st.form("data_form", clear_on_submit=True):
         )
         st.session_state.plant_data = pd.concat([st.session_state.plant_data, new_data], ignore_index=True)
         st.success("데이터가 성공적으로 기록되었습니다!")
+        save_data() # 데이터 기록 후 파일에 저장
 
 st.subheader("전체 기록 데이터")
 

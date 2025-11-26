@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="결과 확인하기", page_icon="📊")
-
 st.markdown("# 📊 실험 결과 확인하기")
 st.sidebar.header("결과 확인하기")
 
