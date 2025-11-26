@@ -34,9 +34,10 @@ if "messages" not in st.session_state:
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
+        # 메시지에 차트나 데이터프레임이 포함된 경우 함께 표시
         if "dataframe" in message:
             st.dataframe(message["dataframe"])
-        if "chart" in message:
+        if "line_chart" in message:
             st.line_chart(message["chart"])
 
 # --- 챗봇의 기능 정의 ---
@@ -64,22 +65,31 @@ def show_record_form():
 
 def show_results():
     """결과 그래프와 데이터를 표시하는 함수"""
+    if st.session_state.plant_data.empty:
+        response_content = "아직 기록된 데이터가 없습니다. 먼저 실험을 기록해주세요."
+        st.session_state.messages.append({"role": "assistant", "content": response_content})
+        with st.chat_message("assistant"):
+            st.warning(response_content)
+        return
+
+    # 데이터 준비
+    df = st.session_state.plant_data.copy()
+    df['날짜'] = pd.to_datetime(df['날짜'])
+    df = df.sort_values(by="날짜")
+    pivot_df = df.pivot_table(index='날짜', columns='그룹', values='식물 키(cm)')
+
+    # 챗봇 응답을 대화 기록에 저장
+    response_message = {
+        "role": "assistant",
+        "content": "📊 실험 결과를 그래프로 보여드릴게요.",
+        "chart": pivot_df  # 그래프 데이터를 메시지에 포함
+    }
+    st.session_state.messages.append(response_message)
+
+    # 화면에 응답 표시
     with st.chat_message("assistant"):
-        if st.session_state.plant_data.empty:
-            st.warning("아직 기록된 데이터가 없습니다. 먼저 실험을 기록해주세요.")
-            return
-
-        st.write("📊 실험 결과를 보여드릴게요.")
-        
-        # 데이터 준비
-        df = st.session_state.plant_data.copy()
-        df['날짜'] = pd.to_datetime(df['날짜'])
-        df = df.sort_values(by="날짜")
-        pivot_df = df.pivot_table(index='날짜', columns='그룹', values='식물 키(cm)')
-
-        # 그래프와 데이터프레임을 메시지에 추가하여 표시
+        st.write(response_message["content"])
         st.line_chart(pivot_df)
-        st.dataframe(df.reset_index(drop=True))
 
 # --- 사용자 입력 처리 ---
 if prompt := st.chat_input("무엇을 하시겠어요?"):
