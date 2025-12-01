@@ -69,8 +69,13 @@ def display_record_form():
         st.write("📝 **열 변화 관찰 기록**을 시작합니다. 빈칸을 채워주세요!")
         
         with st.form("data_form", clear_on_submit=True): 
-            # 날짜와 시간을 동시에 기록하여 시간 경과에 따른 변화를 정확히 측정
-            observation_datetime = st.datetime_input("🗓️ 관찰 날짜 및 시간", value=datetime.now(), key="obs_datetime")
+            # 날짜와 시간을 동시에 기록하여 시간 경과에 따른 변화를 정확히 측정 (st.datetime_input 오류 방지를 위해 분리)
+            now = datetime.now()
+            observation_date = st.date_input("🗓️ 관찰 날짜", value=now.date(), key="obs_date")
+            observation_time = st.time_input("⏱️ 관찰 시간", value=now.time(), key="obs_time")
+            
+            # Combine date and time inputs into one datetime object
+            observation_datetime = datetime.combine(observation_date, observation_time)
             
             # 단열 실험 조건으로 그룹 변경
             experiment_group = st.selectbox("🧪 실험 그룹 선택 (실험 조건)", ("🔥 따뜻한 담요 컵 (단열)", "🧊 그냥 컵 (대조군)"), key="group_select")
