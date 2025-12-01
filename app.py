@@ -3,40 +3,41 @@ import pandas as pd
 from datetime import datetime
 import os
 import numpy as np
-import time 
 
 # --- Configuration ---
 st.set_page_config(
-    page_title="💧 물이 사라지는 속도 마법사",
-    page_icon="💧",
+    page_title="⏱️ 용해 속도 마법사 (40분 실험)",
+    page_icon="🧪",
     layout="wide"
 )
 
-st.title("💧 물이 사라지는 속도 마법사")
-st.markdown("햇빛, 그늘, 바람 등 다른 조건에 따른 **물의 증발 속도를 즉시 계산**하고 비교하여 분석해 드립니다.")
+st.title("🧪 용해 속도 비교 분석 챗봇")
+st.markdown("뜨거운 물과 찬물에서 설탕이 녹는 시간을 기록하면, 챗봇이 **평균 속도**를 계산해 드립니다. (40분 수업용)")
 
 
 # --- Data Management Functions ---
-DATA_FILE = "evaporation_experiment_data.csv"
+DATA_FILE = "dissolving_experiment_data.csv"
 
 def load_data():
     """CSV 파일에서 데이터를 로드하거나 비어있는 DataFrame을 생성합니다."""
     if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE, dtype={'수위(mm)': np.float64})
-    # 실험 주제에 맞게 컬럼명 변경: 수위(mm)
-    return pd.DataFrame(columns=["날짜 및 시간", "조건 (그룹)", "수위(mm)", "메모"])
+        return pd.read_csv(DATA_FILE, dtype={'용해 시간(초)': np.float64})
+    # 실험 주제에 맞게 컬럼명 변경: 용해 시간(초)
+    return pd.DataFrame(columns=["날짜 및 시간", "조건 (그룹)", "용해 시간(초)", "메모"])
 
 def save_data():
     """현재 세션 데이터를 CSV 파일에 저장합니다."""
-    if 'experiment_data' in st.session_state:
-        st.session_state.experiment_data.to_csv(DATA_FILE, index=False, encoding='utf-8')
+    if 'experiment_data' not in st.session_state:
+        st.error("데이터 저장 오류: experiment_data가 세션에 없습니다.")
+        return
+    st.session_state.experiment_data.to_csv(DATA_FILE, index=False, encoding='utf-8')
 
 # --- Session State Initialization ---
 if 'experiment_data' not in st.session_state:
     st.session_state.experiment_data = load_data()
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "안녕하세요! 🙋‍♂️ 저는 여러분의 물 마법 도우미 챗봇이에요. 물이 얼마나 빨리 사라지는지 함께 관찰해 봅시다! 아래에서 **'관찰 기록하기'** 또는 **'결과 분석 보기'**를 선택해주세요."}
+        {"role": "assistant", "content": "안녕하세요! 🙋‍♂️ 저는 여러분의 용해 실험 도우미 챗봇이에요. 설탕이 얼마나 빨리 녹는지 함께 측정해 봅시다! 아래에서 **'실험 기록하기'** 또는 **'결과 분석 보기'**를 선택해주세요."}
     ]
 if 'show_record_form' not in st.session_state:
     st.session_state.show_record_form = False
@@ -51,8 +52,8 @@ for message in st.session_state.messages:
         
         if "chart_data" in message:
             try:
-                # 증발은 시간에 따른 변화이므로 라인 차트 사용
-                st.line_chart(message["chart_data"]) 
+                # 그룹별 평균 용해 시간 비교는 막대 그래프가 효과적
+                st.bar_chart(message["chart_data"]) 
             except Exception as e:
                 st.error(f"⚠️ 그래프를 그리는 중 오류가 발생했습니다. 데이터를 확인해주세요: {e}")
 
@@ -62,68 +63,39 @@ for message in st.session_state.messages:
 def display_record_form():
     """데이터 기록 폼을 표시합니다."""
     with st.chat_message("assistant"):
-        st.write("📝 **물의 높이(수위) 측정 기록**을 시작합니다. 몇 mm인가요?")
+        st.write("📝 **설탕 용해 시간 측정 기록**을 시작합니다.")
         
         with st.form("data_form", clear_on_submit=True): 
             now = datetime.now()
-            observation_date = st.date_input("🗓️ 관찰 날짜", value=now.date(), key="obs_date")
-            observation_time = st.time_input("⏱️ 관찰 시간", value=now.time(), key="obs_time")
-            observation_datetime = datetime.combine(observation_date, observation_time)
+            observation_datetime = datetime.combine(now.date(), now.time())
             
-            # 실험 조건 그룹 선택
-            condition = st.selectbox("🧪 실험 조건 (그룹)", ("☀️ 햇빛이 잘 드는 곳", "☁️ 그늘진 곳", "💨 선풍기 바람이 부는 곳"), key="group_select")
+            # 실험 조건 그룹 선택 (온도)
+            condition = st.selectbox("🧪 실험 조건 (그룹)", ("🔥 뜨거운 물", "🧊 찬 물"), key="group_select")
             
-            # 수위 측정 항목
-            water_level = st.number_input("📏 물의 현재 수위 (mm)", min_value=1.0, step=1.0, format="%d", key="water_level")
+            # 용해 시간 측정 항목
+            dissolving_time = st.number_input("⏱️ 용해 시간 (초)", min_value=1.0, step=1.0, format="%.1f", key="dissolving_time")
             
-            memo = st.text_area("📝 기타 관찰 내용 (날씨, 바람 세기 등)", key="memo_input")
+            memo = st.text_area("📝 기타 관찰 내용 (저은 횟수, 물 온도 등)", key="memo_input")
             
             submitted = st.form_submit_button("✅ 기록 제출하기")
 
             if submitted:
-                if water_level < 1:
-                    st.error("수위는 1mm 이상이어야 합니다.")
+                if dissolving_time < 1:
+                    st.error("용해 시간은 1초 이상이어야 합니다.")
                 else:
                     formatted_datetime = observation_datetime.strftime("%Y-%m-%d %H:%M:%S")
                     new_data = pd.DataFrame(
-                        [[formatted_datetime, condition, water_level, memo]],
-                        columns=["날짜 및 시간", "조건 (그룹)", "수위(mm)", "메모"]
+                        [[formatted_datetime, condition, dissolving_time, memo]],
+                        columns=["날짜 및 시간", "조건 (그룹)", "용해 시간(초)", "메모"]
                     )
                     
                     st.session_state.experiment_data = pd.concat([st.session_state.experiment_data, new_data], ignore_index=True)
                     save_data()
                     
-                    st.session_state.messages.append({"role": "assistant", "content": f"✅ {formatted_datetime}의 관찰 기록(수위: {water_level}mm, 조건: {condition})이 저장되었습니다! 다음 관찰을 기록해보세요."})
+                    st.session_state.messages.append({"role": "assistant", "content": f"✅ {condition}에서의 용해 시간({dissolving_time:.1f}초)이 저장되었습니다! 다른 조건이나 반복 실험을 기록해 보세요."})
                     
                     st.session_state.show_record_form = False 
                     st.rerun()
-
-def calculate_evaporation_rate(group_data):
-    """주어진 그룹 데이터에 대해 평균 증발 속도(mm/day)를 계산합니다."""
-    if len(group_data) < 2:
-        return np.nan
-    
-    # 가장 오래된 기록과 가장 최신 기록을 찾습니다.
-    start_record = group_data.iloc[0]
-    end_record = group_data.iloc[-1]
-    
-    time_diff_seconds = (end_record['날짜 및 시간'] - start_record['날짜 및 시간']).total_seconds()
-    
-    if time_diff_seconds == 0:
-        return np.nan # 시간이 지나지 않았으면 계산 불가
-        
-    # 증발된 물의 양
-    evaporated_amount = start_record['수위(mm)'] - end_record['수위(mm)']
-    
-    # 시간 변화 (일 단위)
-    time_diff_days = time_diff_seconds / (60 * 60 * 24)
-    
-    if time_diff_days <= 0 or evaporated_amount < 0:
-        return np.nan # 시간 순서가 잘못되었거나 물이 늘어난 경우 (측정 오류)
-    
-    # 증발 속도 = 증발량 / 시간 변화 (mm/day)
-    evaporation_rate = evaporated_amount / time_diff_days
-    return evaporation_rate
 
 def show_results():
     """결과 그래프, 분석, 교육적 해석을 표시합니다."""
@@ -131,62 +103,49 @@ def show_results():
     df = st.session_state.experiment_data.copy()
     
     if df.empty:
-        response_content = "아직 기록된 실험이 없어요. 😢 먼저 '관찰 기록하기' 버튼을 눌러 물의 높이를 기록해주세요."
+        response_content = "아직 기록된 실험이 없어요. 😢 먼저 '실험 기록하기' 버튼을 눌러 시간을 기록해주세요."
         st.session_state.messages.append({"role": "assistant", "content": response_content})
         st.rerun() 
         return
 
     # --- 데이터 전처리 및 분석 시작 ---
     try:
-        # Data Preparation for Analysis and Charting
-        df['날짜 및 시간'] = pd.to_datetime(df['날짜 및 시간'], errors='coerce')
-        df.dropna(subset=['날짜 및 시간'], inplace=True)
-        df = df.sort_values(by="날짜 및 시간")
+        # 그룹별 평균 용해 시간 계산 (챗봇의 핵심 분석 기능)
+        analysis_df = df.groupby('조건 (그룹)')['용해 시간(초)'].mean().reset_index()
+        analysis_df.columns = ['조건 (그룹)', '평균 용해 시간 (초)']
+        analysis_df = analysis_df.set_index('조건 (그룹)').round(1)
         
-        # 시간 순서대로 각 그룹의 평균 수위 계산 (그래프 출력용)
-        pivot_df = df.pivot_table(index='날짜 및 시간', columns='조건 (그룹)', values='수위(mm)', aggfunc='mean')
+        # 그래프 데이터
+        chart_df = analysis_df.copy()
 
-        # --- Educational Analysis (증발 속도 분석) ---
+        # --- Educational Analysis (용해 속도 분석) ---
         
-        # 그룹별 데이터 그룹화 및 속도 계산
-        groups = df['조건 (그룹)'].unique()
-        rate_data = []
-        
-        for group in groups:
-            group_data = df[df['조건 (그룹)'] == group].sort_values('날짜 및 시간')
-            rate = calculate_evaporation_rate(group_data)
-            rate_data.append({'조건 (그룹)': group, '평균 증발 속도 (mm/일)': rate})
-            
-        rate_df = pd.DataFrame(rate_data).set_index('조건 (그룹)').round(2)
+        # 두 그룹 모두 데이터가 있는지 확인
+        hot_time = analysis_df.loc['🔥 뜨거운 물']['평균 용해 시간 (초)'] if '🔥 뜨거운 물' in analysis_df.index else np.nan
+        cold_time = analysis_df.loc['🧊 찬 물']['평균 용해 시간 (초)'] if '🧊 찬 물' in analysis_df.index else np.nan
         
         
-        # 분석 결과 해석
-        valid_rates = rate_df.dropna()
-        
-        if valid_rates.empty or len(valid_rates) < 2:
-            interpretation = "정확한 증발 속도 분석을 위해서는 각 그룹별로 **최소 2회 이상** 관찰한 기록이 필요합니다. ⏱️"
+        if pd.isna(hot_time) or pd.isna(cold_time):
+            interpretation = "정확한 비교 분석을 위해서는 **뜨거운 물**과 **찬 물** 조건 모두에서 기록이 필요합니다. ⏱️"
         else:
-            # 가장 빠른 증발 속도 조건 찾기
-            fastest_rate = valid_rates['평균 증발 속도 (mm/일)'].max()
-            fastest_group = valid_rates['평균 증발 속도 (mm/일)'].idxmax()
-            
-            # 초등학생 눈높이에 맞춘 해석 (3~4학년 수준)
-            interpretation = (
-                f"🎉 **물이 사라지는 마법 분석 결과!**\n\n"
-                f"챗봇이 계산한 결과, 물이 **가장 빨리 사라진** 곳은 **'{fastest_group}'** 이며, 하루에 평균 **{fastest_rate:.1f}mm**씩 사라졌어요! \n\n"
-                f"왜 그럴까요? 물은 **뜨거운 열**을 받거나, **바람**이 불 때 빨리 사라진답니다. 햇빛은 물을 뜨겁게 하고, 바람은 물이 날아가는 것을 도와줘요. \n\n"
-                f"**그래프**를 보면 어떤 그룹의 물이 가장 빨리 줄어들었는지 눈으로 확인할 수 있을 거예요!"
-            )
-            
-            # 가장 느린 그룹 (보너스 해석)
-            slowest_rate = valid_rates['평균 증발 속도 (mm/일)'].min()
-            slowest_group = valid_rates['평균 증발 속도 (mm/일)'].idxmin()
-            
-            if fastest_group != slowest_group:
-                interpretation += (
-                    f"\n\n반대로, **'{slowest_group}'**에서는 하루에 **{slowest_rate:.1f}mm**씩 사라져 물이 **가장 오래 남아있었어요**. "
-                    f"이곳은 물이 뜨거워지기 어렵거나, 바람이 잘 불지 않는 곳이었겠죠?"
+            if hot_time < cold_time * 0.8: # 뜨거운 물이 20% 이상 빠를 때 (정상 결과)
+                time_diff = cold_time - hot_time
+                
+                # 초등학생 눈높이에 맞춘 해석 (3~4학년 수준)
+                interpretation = (
+                    f"🎉 **용해 속도 분석 결과!**\n\n"
+                    f"챗봇이 계산한 평균 시간은 **뜨거운 물**이 **{hot_time:.1f}초**, **찬 물**이 **{cold_time:.1f}초**로, "
+                    f"뜨거운 물이 약 **{time_diff:.1f}초** 더 빨랐어요! \n\n"
+                    f"이것은 물이 뜨거울수록 **물 분자가 더 빨리 움직이기** 때문이에요! 물 분자가 설탕을 더 세고 빠르게 때려서 설탕을 잘게 부수는 것과 같아요. \n\n"
+                    f"**그래프**를 보면 어떤 물이 설탕을 빨리 녹이는 마법을 부렸는지 알 수 있을 거예요!"
                 )
+            elif cold_time < hot_time * 0.8: # 예상 밖의 결과
+                interpretation = (
+                    f"🧐 **흥미로운 결과!** 챗봇이 계산한 결과, 찬물이 뜨거운 물보다 더 빨리 녹았어요! 이 결과는 과학적 예상과 반대됩니다.\n\n"
+                    f"혹시 뜨거운 물을 너무 세게 저었거나, 찬물의 설탕을 더 오래 저었을까요? 실험 결과를 다시 한번 확인해 보고, **'저어주는 횟수'**를 똑같이 맞춰서 다시 실험해 보는 것이 좋겠어요!"
+                )
+            else:
+                interpretation = "두 물의 평균 용해 시간이 비슷하네요. 아마도 물의 온도 차이가 크지 않았거나, 설탕의 양이 너무 적었을 수 있어요. 온도 차이를 더 크게 해서 다시 실험해 봅시다! 🌡️"
             
 
     except Exception as e:
@@ -200,14 +159,14 @@ def show_results():
 
 
     # --- Construct and Display Response ---
-    response_content = f"📊 **실시간 물 증발 속도 분석 리포트**\n\n{interpretation}\n\n**✅ 챗봇 분석 요약: 하루 평균 증발 속도**"
+    response_content = f"📊 **실시간 용해 속도 분석 리포트**\n\n{interpretation}\n\n**✅ 챗봇 분석 요약: 평균 용해 시간**"
     
     # Append educational message and chart data to the chat history
     st.session_state.messages.append({
         "role": "assistant",
         "content": response_content,
-        "chart_data": pivot_df, # 수위 변화 라인 차트
-        "dataframe": rate_df.astype(str) # 분석 테이블
+        "chart_data": chart_df, # 평균 용해 시간 막대 그래프
+        "dataframe": analysis_df.astype(str) # 분석 테이블
     })
     
     # Clear and rerun to ensure the chat history is fully updated and displayed
@@ -223,13 +182,13 @@ if prompt := st.chat_input("무엇을 하시겠어요? ('기록' 또는 '결과 
     st.session_state.show_record_form = False # Hide form if chat is active
     
     # Simple keyword routing for the chatbot
-    if "기록" in prompt or "관찰" in prompt:
+    if "기록" in prompt or "실험" in prompt:
         st.session_state.show_record_form = True
     elif "결과" in prompt or "보기" in prompt or "분석" in prompt:
         show_results()
     else:
         # Generic response
-        response_content = "죄송해요. 😥 저는 지금 '관찰 기록'과 '결과 분석'만 할 수 있어요. 둘 중 하나를 선택하거나, 아래 버튼을 눌러주세요!"
+        response_content = "죄송해요. 😥 저는 지금 '실험 기록'과 '결과 분석'만 할 수 있어요. 둘 중 하나를 선택하거나, 아래 버튼을 눌러주세요!"
         st.session_state.messages.append({"role": "assistant", "content": response_content})
         st.rerun()
 
@@ -241,8 +200,8 @@ if not st.session_state.show_record_form and st.session_state.messages[-1]["role
     st.write("---")
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🧪 관찰 기록하기", use_container_width=True):
-            st.session_state.messages.append({"role": "user", "content": "관찰 기록하기 버튼을 눌렀어요."})
+        if st.button("🧪 실험 기록하기", use_container_width=True):
+            st.session_state.messages.append({"role": "user", "content": "실험 기록하기 버튼을 눌렀어요."})
             st.session_state.show_record_form = True # Toggle state to show form
             st.rerun()
     with col2:
