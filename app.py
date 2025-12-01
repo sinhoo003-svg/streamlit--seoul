@@ -118,60 +118,56 @@ def show_results():
     # --- 데이터 전처리 및 분석 시작 ---
     try:
         # Data Preparation for Analysis and Charting
-        # errors='coerce'를 사용하여 형식이 잘못된 날짜는 NaT(Not a Time)로 만들고, 이후 드롭하여 오류를 방지
         df['날짜 및 시간'] = pd.to_datetime(df['날짜 및 시간'], errors='coerce')
         df.dropna(subset=['날짜 및 시간'], inplace=True)
         df = df.sort_values(by="날짜 및 시간")
         
-        # 시간 순서대로 각 그룹의 평균 온도 계산
+        # 시간 순서대로 각 그룹의 평균 온도 계산 (그래프 출력용)
         pivot_df = df.pivot_table(index='날짜 및 시간', columns='그룹', values='온도(°C)', aggfunc='mean')
 
         # --- Educational Analysis (단열 효과 분석) ---
         
-        # 두 그룹 모두 데이터가 있는지 확인
-        groups = pivot_df.columns
-        if len(groups) < 2 or pivot_df.shape[0] < 2:
-            interpretation = "두 그룹을 모두 기록하거나 최소 두 번 이상 관찰해야 정확한 분석이 가능합니다. 🧐 온도를 더 자주 기록해보세요!"
-        else:
-            # 마지막 관찰 시점의 온도
-            last_temp = pivot_df.iloc[-1]
+        # 각 그룹의 가장 최신 기록을 찾아서 비교 (시간 동기화 문제 방지)
+        insulated_data = df[df['그룹'] == "🔥 따뜻한 담요 컵 (단열)"].sort_values('날짜 및 시간', ascending=False)
+        control_data = df[df['그룹'] == "🧊 그냥 컵 (대조군)"].sort_values('날짜 및 시간', ascending=False)
+        
+        # 가장 최근에 기록된 온도 추출 (데이터가 없는 경우 NaN)
+        insulated_temp = insulated_data['온도(°C)'].iloc[0] if not insulated_data.empty else np.nan
+        control_temp = control_data['온도(°C)'].iloc[0] if not control_data.empty else np.nan
+        
+        
+        # 두 그룹 모두 최소 하나의 기록이 있어야 분석 진행
+        if pd.notna(insulated_temp) and pd.notna(control_temp):
             
-            # 마지막 관찰 시점의 온도 (NaN이 없도록 get으로 처리)
-            insulated_temp = last_temp.get("🔥 따뜻한 담요 컵 (단열)", np.nan)
-            control_temp = last_temp.get("🧊 그냥 컵 (대조군)", np.nan)
+            # 전체 실험 경과 시간 (분)
+            time_elapsed = (df['날짜 및 시간'].max() - df['날짜 및 시간'].min()).total_seconds() / 60
             
-            # 유효한 데이터가 있을 때만 분석 수행
-            if pd.notna(insulated_temp) and pd.notna(control_temp):
-                
-                # 챗봇의 중요성 강조: 실시간 분석!
-                time_elapsed = (df['날짜 및 시간'].max() - df['날짜 및 시간'].min()).total_seconds() / 60
-                
-                if time_elapsed == 0:
-                     interpretation = "기록을 시작한 시점과 마지막 시점이 동일하여 시간 경과에 따른 변화를 분석할 수 없습니다. ⏱️ 잠시 후 다시 기록해주세요."
-                
-                elif insulated_temp > control_temp * 1.05: # 단열 컵이 5% 이상 온도가 더 높을 때
-                    temp_diff = insulated_temp - control_temp
-                    interpretation = (
-                        f"대단해요! ✨ **{time_elapsed:.1f}분**이 지난 후,\n"
-                        f"'🔥 따뜻한 담요 컵'의 온도는 **{insulated_temp:.1f}°C**로, '🧊 그냥 컵'의 **{control_temp:.1f}°C**보다 "
-                        f"약 **{temp_diff:.1f}°C** 더 높게 유지되었어요! 🎉\n\n"
-                        "이것은 **단열**이 잘 되었기 때문이에요. 컵을 덮은 담요가 외부로 **열이 이동하는 것**을 막아주었답니다. "
-                        "단열재는 열이 밖으로 새어 나가는 속도를 늦춰서 물을 더 오랫동안 따뜻하게 보존해 주는 중요한 역할을 해요. "
-                        "이 실험으로 **단열의 과학적 원리**를 확인했어요!"
-                    )
-                elif control_temp > insulated_temp * 1.05: # 예상 밖의 결과
-                    interpretation = (
-                        f"흥미롭네요! **{time_elapsed:.1f}분** 후, '🧊 그냥 컵'의 온도가 '🔥 따뜻한 담요 컵'보다 더 높게 나왔어요. 🧐\n\n"
-                        "혹시 사용한 담요가 충분히 단열이 잘 되지 않았거나, 두 컵의 시작 온도가 달랐을까요? "
-                        "실험은 가설을 검증하는 과정이에요. 원인을 찾기 위해 **실험 조건을 다시 한번 확인**하거나, 다른 단열재로 바꿔서 실험해 보는 것이 좋겠어요!"
-                    )
-                else:
-                    interpretation = (
-                        "두 컵의 온도 변화가 현재까지 비슷하네요. 아마도 실험이 시작된 지 얼마 되지 않았거나, "
-                        "사용된 단열재의 성능 차이가 크지 않을 수 있어요. 열의 이동을 확인하려면 조금 더 오래 관찰이 필요해요! ⏰"
-                    )
+            if time_elapsed <= 0.1 and df.shape[0] < 3: # 10초 이내 & 기록이 거의 없을 때
+                 interpretation = "기록을 시작한 지 얼마 되지 않았거나, 충분한 데이터가 없습니다. ⏱️ 잠시 후 다시 기록해주세요."
+            
+            elif insulated_temp > control_temp * 1.05: # 단열 컵이 5% 이상 온도가 더 높을 때
+                temp_diff = insulated_temp - control_temp
+                interpretation = (
+                    f"대단해요! ✨ **{time_elapsed:.1f}분**이 지난 후,\n"
+                    f"'🔥 따뜻한 담요 컵'의 온도는 **{insulated_temp:.1f}°C**로, '🧊 그냥 컵'의 **{control_temp:.1f}°C**보다 "
+                    f"약 **{temp_diff:.1f}°C** 더 높게 유지되었어요! 🎉\n\n"
+                    "이것은 **단열**이 잘 되었기 때문이에요. 컵을 덮은 담요가 외부로 **열이 이동하는 것**을 막아주었답니다. "
+                    "단열재는 열이 밖으로 새어 나가는 속도를 늦춰서 물을 더 오랫동안 따뜻하게 보존해 주는 중요한 역할을 해요. "
+                    "이 실험으로 **단열의 과학적 원리**를 확인했어요! "
+                )
+            elif control_temp > insulated_temp * 1.05: # 예상 밖의 결과
+                interpretation = (
+                    f"흥미롭네요! **{time_elapsed:.1f}분** 후, '🧊 그냥 컵'의 온도가 '🔥 따뜻한 담요 컵'보다 더 높게 나왔어요. 🧐\n\n"
+                    "혹시 사용한 담요가 충분히 단열이 잘 되지 않았거나, 두 컵의 시작 온도가 달랐을까요? "
+                    "실험은 가설을 검증하는 과정이에요. 원인을 찾기 위해 **실험 조건을 다시 한번 확인**하거나, 다른 단열재로 바꿔서 실험해 보는 것이 좋겠어요!"
+                )
             else:
-                interpretation = "두 그룹의 마지막 관찰 기록이 동시에 존재하지 않아 비교 분석이 어렵습니다. ⏱️ 시간을 맞추어 다시 기록해주세요."
+                interpretation = (
+                    "두 컵의 온도 변화가 현재까지 비슷하네요. 아마도 실험이 시작된 지 얼마 되지 않았거나, "
+                    "사용된 단열재의 성능 차이가 크지 않을 수 있어요. 열의 이동을 확인하려면 조금 더 오래 관찰이 필요해요! ⏰"
+                )
+        else:
+            interpretation = "두 그룹의 최신 관찰 기록이 동시에 존재하지 않습니다. ⏱️ 두 그룹 모두 기록을 하나 이상 입력해주세요."
 
     except Exception as e:
         # 데이터 처리 중 발생하는 예상치 못한 오류를 잡아 사용자에게 안내
