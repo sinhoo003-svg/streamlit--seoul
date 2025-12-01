@@ -6,13 +6,13 @@ import numpy as np
 
 # --- Configuration ---
 st.set_page_config(
-    page_title="🔥 열의 이동과 단열 실험실",
+    page_title="🔥 열의 이동과 단열 실험실 - 실시간 분석",
     page_icon="🌡️",
     layout="wide"
 )
 
-st.title("🌡️ 열의 이동과 단열 실험 챗봇")
-st.markdown("다른 조건의 컵에 담긴 물의 온도 변화를 기록하고, 단열 효과를 분석해 드립니다.")
+st.title("🌡️ 실시간 열 변화 분석 챗봇")
+st.markdown("손으로 하기 어려운 **냉각 속도(Cooling Rate)를 즉시 계산**하여, 단열 효과를 과학적으로 증명해 드립니다.")
 
 
 # --- Data Management Functions ---
@@ -109,6 +109,25 @@ def display_record_form():
                     st.session_state.show_record_form = False 
                     st.rerun()
 
+def calculate_cooling_rate(group_data):
+    """주어진 그룹 데이터에 대해 냉각 속도(C/min)를 계산합니다."""
+    if len(group_data) < 2:
+        return np.nan
+    
+    # 가장 오래된 기록과 가장 최신 기록을 찾습니다.
+    start_record = group_data.iloc[0]
+    end_record = group_data.iloc[-1]
+    
+    time_diff_seconds = (end_record['날짜 및 시간'] - start_record['날짜 및 시간']).total_seconds()
+    temp_diff = start_record['온도(°C)'] - end_record['온도(°C)']
+    
+    if time_diff_seconds <= 60:
+        return np.nan # 1분 미만은 정확도 문제로 분석하지 않음
+
+    # 냉각 속도 = 온도 변화 / 시간 변화 (분당 온도 하락)
+    cooling_rate = temp_diff / (time_diff_seconds / 60)
+    return cooling_rate
+
 def show_results():
     """결과 그래프, 분석, 교육적 해석을 표시합니다."""
     
@@ -132,47 +151,49 @@ def show_results():
 
         # --- Educational Analysis (단열 효과 분석) ---
         
-        # 각 그룹의 가장 최신 기록을 찾아서 비교 (시간 동기화 문제 방지)
-        insulated_data = df[df['그룹'] == "🔥 따뜻한 담요 컵 (단열)"].sort_values('날짜 및 시간', ascending=False)
-        control_data = df[df['그룹'] == "🧊 그냥 컵 (대조군)"].sort_values('날짜 및 시간', ascending=False)
+        # 각 그룹별로 데이터 그룹화
+        insulated_data = df[df['그룹'] == "🔥 따뜻한 담요 컵 (단열)"]
+        control_data = df[df['그룹'] == "🧊 그냥 컵 (대조군)"]
         
-        # 가장 최근에 기록된 온도 추출 (데이터가 없는 경우 NaN)
-        insulated_temp = insulated_data['온도(°C)'].iloc[0] if not insulated_data.empty else np.nan
-        control_temp = control_data['온도(°C)'].iloc[0] if not control_data.empty else np.nan
+        # 냉각 속도 계산
+        insulated_rate = calculate_cooling_rate(insulated_data)
+        control_rate = calculate_cooling_rate(control_data)
+        
+        cooling_summary = {
+            '그룹': ["🔥 따뜻한 담요 컵 (단열)", "🧊 그냥 컵 (대조군)"],
+            '분당 냉각 속도 (℃/분)': [insulated_rate, control_rate]
+        }
+        cooling_df = pd.DataFrame(cooling_summary).set_index('그룹')
         
         
-        # 두 그룹 모두 최소 하나의 기록이 있어야 분석 진행
-        if pd.notna(insulated_temp) and pd.notna(control_temp):
+        # 분석 결과 해석
+        if pd.notna(insulated_rate) and pd.notna(control_rate):
             
-            # 전체 실험 경과 시간 (분)
-            time_elapsed = (df['날짜 및 시간'].max() - df['날짜 및 시간'].min()).total_seconds() / 60
-            
-            if time_elapsed <= 0.1 and df.shape[0] < 3: # 10초 이내 & 기록이 거의 없을 때
-                 interpretation = "기록을 시작한 지 얼마 되지 않았거나, 충분한 데이터가 없습니다. ⏱️ 잠시 후 다시 기록해주세요."
-            
-            elif insulated_temp > control_temp * 1.05: # 단열 컵이 5% 이상 온도가 더 높을 때
-                temp_diff = insulated_temp - control_temp
+            if insulated_rate < control_rate * 0.9: # 단열 컵의 냉각 속도가 10% 이상 느릴 때
+                rate_diff = control_rate - insulated_rate
+                
+                # **초등 수준에 맞춰 해석 단순화 및 시각 자료 요청**
                 interpretation = (
-                    f"대단해요! ✨ **{time_elapsed:.1f}분**이 지난 후,\n"
-                    f"'🔥 따뜻한 담요 컵'의 온도는 **{insulated_temp:.1f}°C**로, '🧊 그냥 컵'의 **{control_temp:.1f}°C**보다 "
-                    f"약 **{temp_diff:.1f}°C** 더 높게 유지되었어요! 🎉\n\n"
-                    "이것은 **단열**이 잘 되었기 때문이에요. 컵을 덮은 담요가 외부로 **열이 이동하는 것**을 막아주었답니다. "
-                    "단열재는 열이 밖으로 새어 나가는 속도를 늦춰서 물을 더 오랫동안 따뜻하게 보존해 주는 중요한 역할을 해요. "
-                    "이 실험으로 **단열의 과학적 원리**를 확인했어요! "
+                    f"✨ **실시간 과학 분석 결과:**\n\n"
+                    f"챗봇이 계산한 결과, 담요 컵은 **1분마다 {insulated_rate:.2f}°C**의 열을 잃었고, "
+                    f"그냥 컵은 **1분마다 {control_rate:.2f}°C**의 열을 잃었어요. "
+                    f"담요 컵이 약 **{rate_diff:.2f}°C**만큼 **열을 더 천천히 잃은** 거예요! 🎉\n\n"
+                    "이것은 **단열재**가 열이 밖으로 나가는 길을 막아주기 때문이랍니다. 온도를 지켜주는 벽처럼 말이죠! "
+                    "단열의 원리를 그림으로 확인해 보세요! "
                 )
-            elif control_temp > insulated_temp * 1.05: # 예상 밖의 결과
+            elif insulated_rate > control_rate * 1.1: # 예상 밖의 결과
                 interpretation = (
-                    f"흥미롭네요! **{time_elapsed:.1f}분** 후, '🧊 그냥 컵'의 온도가 '🔥 따뜻한 담요 컵'보다 더 높게 나왔어요. 🧐\n\n"
-                    "혹시 사용한 담요가 충분히 단열이 잘 되지 않았거나, 두 컵의 시작 온도가 달랐을까요? "
-                    "실험은 가설을 검증하는 과정이에요. 원인을 찾기 위해 **실험 조건을 다시 한번 확인**하거나, 다른 단열재로 바꿔서 실험해 보는 것이 좋겠어요!"
+                    f"흥미롭네요! 🧐 챗봇이 계산한 결과, '🔥 따뜻한 담요 컵'의 냉각 속도({insulated_rate:.2f}°C/분)가 "
+                    f"'🧊 그냥 컵'({control_rate:.2f}°C/분)보다 더 빨라요! 이 결과는 우리의 예상(가설)과 반대됩니다.\n\n"
+                    "이런 경우, 챗봇은 **실험 조건을 다시 확인**하라고 알려줍니다. 혹시 담요를 덮는 과정에서 물이 쏟아져 온도가 빨리 변했거나, 담요 자체가 열을 잘 전달하는 물질이었을까요? 원인을 찾아봅시다!"
                 )
             else:
                 interpretation = (
-                    "두 컵의 온도 변화가 현재까지 비슷하네요. 아마도 실험이 시작된 지 얼마 되지 않았거나, "
-                    "사용된 단열재의 성능 차이가 크지 않을 수 있어요. 열의 이동을 확인하려면 조금 더 오래 관찰이 필요해요! ⏰"
+                    "두 컵의 열 손실 속도가 현재까지 비슷하네요. 냉각 속도 차이가 크지 않을 수 있어요. "
+                    "단열 효과가 미미하거나, 아직 충분한 시간 동안 기록되지 않았을 수 있습니다. ⏰ **10분 후**에 다시 기록하고 분석해 보세요!"
                 )
         else:
-            interpretation = "두 그룹의 최신 관찰 기록이 동시에 존재하지 않습니다. ⏱️ 두 그룹 모두 기록을 하나 이상 입력해주세요."
+            interpretation = "정확한 냉각 속도 분석을 위해서는 각 그룹별로 **최소 1분 이상의 간격**을 두고 **2회 이상** 관찰한 기록이 필요합니다. ⏱️"
 
     except Exception as e:
         # 데이터 처리 중 발생하는 예상치 못한 오류를 잡아 사용자에게 안내
@@ -185,14 +206,14 @@ def show_results():
 
 
     # --- Construct and Display Response ---
-    response_content = f"📊 **실시간 열 변화 분석 리포트**\n\n{interpretation}\n\n**📈 관찰 시간 경과에 따른 온도 변화 그래프**"
+    response_content = f"📊 **실시간 열 변화 분석 리포트**\n\n{interpretation}\n\n**✅ 챗봇 분석 요약: 분당 냉각 속도**"
     
     # Append educational message and chart data to the chat history
     st.session_state.messages.append({
         "role": "assistant",
         "content": response_content,
         "chart_data": pivot_df, 
-        "dataframe": df.astype({'날짜 및 시간': str}) # Convert datetime back to string for clean display
+        "dataframe": cooling_df # 냉각 속도 분석 테이블 추가
     })
     
     # Clear and rerun to ensure the chat history is fully updated and displayed
