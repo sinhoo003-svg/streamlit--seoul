@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>초등 영어 튜터 챗봇 (Koni) ✨</title>
+    <title>초등 영어 튜터 챗봇 (Koni)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -84,7 +84,7 @@
             <div class="flex justify-start">
                 <div class="p-4 chat-bubble-koni">
                     <p class="font-bold text-indigo-700">Koni ✨</p>
-                    <p class="mt-1">Hello! I'm Koni, your English tutor. Nice to meet you! 😊 **오늘 배운 내용을 복습 퀴즈로 먼저 확인해보자! 준비됐니? (Are you ready?)**</p>
+                    <p class="mt-1">Hello! I'm Koni, your English tutor. Nice to meet you! 😊 오늘 배운 내용을 복습 퀴즈로 먼저 확인해보자! 준비됐니? (Are you ready?)</p>
                 </div>
             </div>
             <!-- Loading indicator placeholder -->
@@ -188,7 +188,7 @@
             }
         }
 
-        // UPDATED system instruction: Removed '**' markers and added emoji/tone directives
+        // System Instruction: Updated tutor name and symbol (Keeping Koni and adjusting symbols)
         const systemInstruction = {
             parts: [{
                 text: "You are 'Koni', a friendly, encouraging English tutor for elementary students. Use a soft, positive tone in all messages. Use Korean when giving instructions, encouragement, or clarity checks, and use English for core questions and feedback. Use friendly emojis (like 😊, ✨, 📚, 💡) in your responses." +
@@ -202,6 +202,7 @@
         };
 
         let conversationHistory = [
+            // Updated tutor name
             { role: "model", parts: [{ text: "Hello! I'm Koni, your English tutor. Nice to meet you! 😊 오늘 배운 내용을 복습 퀴즈로 먼저 확인해보자! 준비됐니? (Are you ready?)" }] }
         ];
 
