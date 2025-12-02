@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 import time
+import re # 정규표현식 모듈은 여기서 임포트
 
 # --- 환경 설정 및 상수 ---
 # Gemini API 설정
@@ -115,19 +116,7 @@ def render_final_report_page():
         st.error("오류: 최종 보고서 데이터가 없습니다.")
         return
 
-    # 1. 데이터 추출
-    quiz_match = st.session_state.final_report_text.match(/총 (\d+)문제 중 (\d+)문제를 맞혔습니다/);
-    guidance_match = st.session_state.final_report_text.match(/문장 완성 지도가 (\d+)회 제공되었습니다/);
-
-    # 정규표현식으로 추출된 데이터는 st.session_state.final_report_text에 저장되어 있다고 가정합니다.
-    # Streamlit 환경에서는 st.session_state에 저장된 최종 텍스트에서 파싱해야 합니다.
-    # 안전을 위해 정규표현식을 사용합니다.
-    
-    quiz_match = next((m for m in ['총 (\d+)문제 중 (\d+)문제를 맞혔습니다'] if m in report_text), None)
-    guidance_match = next((m for m in ['문장 완성 지도가 (\d+)회 제공되었습니다'] if m in report_text), None)
-    
-    import re
-    
+    # 1. 데이터 추출 (Python 정규표현식 사용)
     quiz_re_match = re.search(r'총 (\d+)문제 중 (\d+)문제를 맞혔습니다', report_text)
     guidance_re_match = re.search(r'문장 완성 지도가 (\d+)회 제공되었습니다', report_text)
     
