@@ -17,8 +17,7 @@ st.markdown(
 
 # --- 환경 설정 및 상수 ---
 # Gemini API 설정 (캔버스 환경에서 키가 자동 제공됨)
-API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent"
-API_KEY = st.secrets.get("GEMINI_API_KEY")
+API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
 
 # Sinu 튜터 시스템 지침 (4 퀴즈 + 2 대화, 총 6턴 유지)
 SYSTEM_INSTRUCTION_TEXT = (
@@ -51,6 +50,8 @@ if "is_help_mode" not in st.session_state:
 # --- Gemini API 호출 함수 ---
 def get_ai_response(history):
     """Gemini API를 호출하고 응답을 받습니다."""
+    API_KEY = st.secrets.get("GEMINI_API_KEY")
+
     if not API_KEY:
         st.error("API 키가 설정되지 않았습니다. Streamlit secrets에 'GEMINI_API_KEY'를 추가해주세요.")
         return "죄송해요! Sinu 튜터가 시스템 문제로 잠시 쉬고 있어요. (API Key is missing)"
@@ -79,12 +80,8 @@ def get_ai_response(history):
                     return "음... Sinu 튜터가 잠시 생각에 잠겼어요. 다른 질문을 해줄래요?"
         except Exception as e:
             st.error(f"API 호출 중 오류가 발생했습니다: {e}") # 디버깅을 위해 실제 오류를 출력합니다.
-            # 환경 문제로 인한 오류가 반복되므로, 사용자에게 노출되는 메시지는 간결하게 처리합니다.
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
-            else:
-                # 최종적으로 기본 오류 메시지를 반환합니다.
-                return response_text
     return response_text
 
 # --- 메시지 처리 로직 ---
@@ -93,12 +90,12 @@ def process_message(user_input, is_option_click=False):
     if not user_input.strip() and not is_option_click:
         return
 
-    # 옵션 클릭이 아니거나, 헬프 모드 중인 경우에만 사용자 히스토리에 추가
-    if not is_option_click or st.session_state.is_help_mode:
-        st.session_state.chat_history.append({"role": "user", "parts": [{"text": user_input}]})
-    
+    # 사용자의 모든 입력을 채팅 기록에 추가하여 AI가 볼 수 있도록 합니다.
+    st.session_state.chat_history.append({"role": "user", "parts": [{"text": user_input}]})
+
+    # AI 응답을 받아옵니다.
     ai_response_text = get_ai_response(st.session_state.chat_history)
-    
+
     # 턴 카운트 증가 (보고서 대기 중이 아니고, 헬프 모드가 아닌 경우에만)
     if not st.session_state.is_report_ready and not st.session_state.is_help_mode:
         st.session_state.turn_count += 1
@@ -106,7 +103,9 @@ def process_message(user_input, is_option_click=False):
     if ai_response_text.startswith('## FINAL REPORT ##'):
         st.session_state.final_report_text = ai_response_text
         st.session_state.is_report_ready = True
-        return 
+        # 보고서가 준비되면 AI 응답을 기록하지 않고 바로 UI를 업데이트합니다.
+        st.rerun()
+        return
 
     # 헬프 모드 상태 업데이트
     if st.session_state.is_help_mode:
@@ -116,10 +115,8 @@ def process_message(user_input, is_option_click=False):
         st.session_state.is_help_mode = True
 
     st.session_state.chat_history.append({"role": "model", "parts": [{"text": ai_response_text}]})
-    
+    # AI 응답 후 UI를 다시 그려서 최신 상태를 반영합니다.
     st.rerun()
-
-# --- UI 랜더링 함수 ---
 
 def render_final_report_page():
     """학습 완료 보고서를 시각적으로 보여줍니다."""
