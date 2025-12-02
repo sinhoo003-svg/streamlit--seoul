@@ -6,10 +6,6 @@ import re
 # import pandas as pd # 챗봇 로직에 불필요하여 제거
 # import import numpy as np # 챗봇 로직에 불필요하여 제거
 
-# --- 사용자 요청 시작 코드 ---
-st.write("Streamlit supports a wide range of data visualizations, including [Plotly, Altair, and Bokeh charts](https://docs.streamlit.io/develop/api-reference/charts). 📊 And with over 20 input widgets, you can easily make your data interactive!")
-# ---------------------------
-
 st.title("Sinu 영어 튜터링 시간!")
 st.markdown(
     """
@@ -22,7 +18,7 @@ st.markdown(
 # --- 환경 설정 및 상수 ---
 # Gemini API 설정 (캔버스 환경에서 키가 자동 제공됨)
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent"
-API_KEY = ""
+API_KEY = st.secrets.get("GEMINI_API_KEY")
 
 # Sinu 튜터 시스템 지침 (4 퀴즈 + 2 대화, 총 6턴 유지)
 SYSTEM_INSTRUCTION_TEXT = (
@@ -55,6 +51,10 @@ if "is_help_mode" not in st.session_state:
 # --- Gemini API 호출 함수 ---
 def get_ai_response(history):
     """Gemini API를 호출하고 응답을 받습니다."""
+    if not API_KEY:
+        st.error("API 키가 설정되지 않았습니다. Streamlit secrets에 'GEMINI_API_KEY'를 추가해주세요.")
+        return "죄송해요! Sinu 튜터가 시스템 문제로 잠시 쉬고 있어요. (API Key is missing)"
+
     payload = {
         "contents": history,
         "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION_TEXT}]},
@@ -71,16 +71,20 @@ def get_ai_response(history):
                 result = response.json()
                 
                 if result.get('candidates') and result['candidates'][0]['content']['parts']:
-                    response_text = result['candidates'][0]['content']['parts'][0]['text']
+                    response_text = result['candidates'][0]['content']['parts'][0].get('text', '')
                     return response_text
                 else:
-                    raise ValueError("Invalid response structure from API.")
+                    # API가 콘텐츠를 반환하지 않은 경우 (예: 안전 설정에 의해 차단)
+                    st.warning("API로부터 유효한 응답을 받지 못했습니다. 응답 구조를 확인하세요.")
+                    return "음... Sinu 튜터가 잠시 생각에 잠겼어요. 다른 질문을 해줄래요?"
         except Exception as e:
+            st.error(f"API 호출 중 오류가 발생했습니다: {e}") # 디버깅을 위해 실제 오류를 출력합니다.
             # 환경 문제로 인한 오류가 반복되므로, 사용자에게 노출되는 메시지는 간결하게 처리합니다.
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
             else:
-                return "죄송해요! 지금 Sinu 튜터가 잠시 아파서 대화를 이어갈 수가 없어요. 잠시 후에 다시 시도해 줄래? (API Error)"
+                # 최종적으로 기본 오류 메시지를 반환합니다.
+                return response_text
     return response_text
 
 # --- 메시지 처리 로직 ---
@@ -276,4 +280,3 @@ def app_main():
 
 if __name__ == "__main__":
     app_main()
-
