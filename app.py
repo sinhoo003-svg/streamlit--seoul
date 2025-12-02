@@ -1,214 +1,531 @@
-import streamlit as st
-import pandas as pd
-from datetime import datetime
-import os
-import numpy as np
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>초등 영어 튜터 챗봇 (Koni) ✨</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #eef2ff; /* Very Light Lavender Background */
+        }
+        .chat-bubble-koni {
+            background-color: #cffafe; /* Soft Cyan/Aqua */
+            border-radius: 1.25rem 1.25rem 1.25rem 0.5rem;
+            max-width: 85%;
+            align-self: flex-start;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .chat-bubble-user {
+            background-color: #6366f1; /* Deep Indigo/Purple */
+            color: white;
+            border-radius: 1.25rem 1.25rem 0.5rem 1.25rem;
+            max-width: 85%;
+            align-self: flex-end;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        /* Custom scrollbar for chat history */
+        #chat-history {
+            scrollbar-width: thin;
+            scrollbar-color: #a78bfa #f3f4f6; /* Soft Purple scrollbar */
+        }
+        #chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-history::-webkit-scrollbar-thumb {
+            background-color: #a78bfa;
+            border-radius: 4px;
+        }
+        #chat-history::-webkit-scrollbar-track {
+            background-color: #f3f4f6;
+        }
+        .option-button {
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+        }
+        .option-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0,0,0,0.2);
+            border-color: #8b5cf6; /* Ring effect on hover */
+        }
+        .results-page-container {
+            min-height: 100vh;
+        }
+        /* Style for the help button */
+        #help-button {
+            background-color: #f87171; /* Soft Red */
+        }
+        #help-button:hover {
+            background-color: #ef4444;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen p-4 sm:p-6 md:p-8">
 
-# --- Configuration ---
-st.set_page_config(
-    page_title="⏱️ 용해 속도 마법사 (40분 실험)",
-    page_icon="🧪",
-    layout="wide"
-)
-
-st.title("🧪 용해 속도 비교 분석 챗봇")
-st.markdown("뜨거운 물과 찬물에서 설탕이 녹는 시간을 기록하면, 챗봇이 **평균 속도**를 계산해 드립니다. (5학년 1학기 '용해와 용액' 참고)")
-
-
-# --- Data Management Functions ---
-DATA_FILE = "dissolving_experiment_data.csv"
-
-def load_data():
-    """CSV 파일에서 데이터를 로드하거나 비어있는 DataFrame을 생성합니다."""
-    if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE, dtype={'용해 시간(초)': np.float64})
-    # 실험 주제에 맞게 컬럼명 변경: 용해 시간(초)
-    return pd.DataFrame(columns=["날짜 및 시간", "조건 (그룹)", "용해 시간(초)", "메모"])
-
-def save_data():
-    """현재 세션 데이터를 CSV 파일에 저장합니다."""
-    if 'experiment_data' not in st.session_state:
-        st.error("데이터 저장 오류: experiment_data가 세션에 없습니다.")
-        return
-    st.session_state.experiment_data.to_csv(DATA_FILE, index=False, encoding='utf-8')
-
-# --- Session State Initialization ---
-if 'experiment_data' not in st.session_state:
-    st.session_state.experiment_data = load_data()
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "안녕하세요! 🙋‍♂️ 저는 여러분의 용해 실험 도우미 챗봇이에요. 설탕이 얼마나 빨리 녹는지 함께 측정해 봅시다! 아래에서 **'실험 기록하기'** 또는 **'결과 분석 보기'**를 선택해주세요."}
-    ]
-if 'show_record_form' not in st.session_state:
-    st.session_state.show_record_form = False
-
-# --- Chat History Display ---
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+    <!-- Main Container -->
+    <div class="flex flex-col flex-grow w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden" id="main-app-container">
         
-        if "dataframe" in message:
-            st.dataframe(message["dataframe"])
-        
-        if "chart_data" in message:
-            try:
-                # 그룹별 평균 용해 시간 비교는 막대 그래프가 효과적
-                st.bar_chart(message["chart_data"]) 
-            except Exception as e:
-                st.error(f"⚠️ 그래프를 그리는 중 오류가 발생했습니다. 데이터를 확인해주세요: {e}")
+        <!-- Header -->
+        <header class="p-4 sm:p-6 bg-indigo-500 text-white shadow-lg flex justify-between items-center" id="app-header">
+            <h1 class="text-2xl sm:text-3xl font-extrabold flex items-center">
+                <span class="mr-2 text-3xl">🤖</span> Koni 영어 튜터링 시간!
+            </h1>
+            <p class="text-sm opacity-90 mt-1 hidden sm:block">신나는 "좋아하는 과목" 대화 연습! 😊</p>
+        </header>
 
+        <!-- Chat History -->
+        <main id="chat-history" class="flex-grow p-4 sm:p-6 space-y-5 overflow-y-auto">
+            <!-- Initial Message from Koni -->
+            <div class="flex justify-start">
+                <div class="p-4 chat-bubble-koni">
+                    <p class="font-bold text-indigo-700">Koni ✨</p>
+                    <p class="mt-1">Hello! I'm Koni, your English tutor. Nice to meet you! 😊 **오늘 배운 내용을 복습 퀴즈로 먼저 확인해보자! 준비됐니? (Are you ready?)**</p>
+                </div>
+            </div>
+            <!-- Loading indicator placeholder -->
+            <div id="loading-indicator" class="hidden flex justify-start">
+                <div class="p-3 bg-gray-100 text-gray-500 rounded-lg shadow-inner">
+                    <p>Koni가 생각 중이야... 잠시만 기다려줘! 💡</p>
+                </div>
+            </div>
+            <!-- Dynamic Report Content will replace this area -->
+        </main>
 
-# --- Chatbot Functions ---
+        <!-- Input Area and Options (Combined) -->
+        <div class="p-4 sm:p-6 border-t border-indigo-200 bg-indigo-50 flex flex-col space-y-4" id="input-control-area">
+            <!-- Dynamic Button Container (for quiz options) -->
+            <div id="option-container" class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-3"></div>
 
-def display_record_form():
-    """데이터 기록 폼을 표시합니다."""
-    with st.chat_message("assistant"):
-        st.write("📝 **설탕 용해 시간 측정 기록**을 시작합니다.")
-        
-        with st.form("data_form", clear_on_submit=True): 
-            now = datetime.now()
-            observation_datetime = datetime.combine(now.date(), now.time())
-            
-            # 실험 조건 그룹 선택 (온도)
-            condition = st.selectbox("🧪 실험 조건 (그룹)", ("🔥 뜨거운 물", "🧊 찬 물"), key="group_select")
-            
-            # 용해 시간 측정 항목
-            dissolving_time = st.number_input("⏱️ 용해 시간 (초)", min_value=1.0, step=1.0, format="%.1f", key="dissolving_time")
-            
-            memo = st.text_area("📝 기타 관찰 내용 (저은 횟수, 물 온도 등)", key="memo_input")
-            
-            submitted = st.form_submit_button("✅ 기록 제출하기")
-
-            if submitted:
-                if dissolving_time < 1:
-                    st.error("용해 시간은 1초 이상이어야 합니다.")
-                else:
-                    formatted_datetime = observation_datetime.strftime("%Y-%m-%d %H:%M:%S")
-                    new_data = pd.DataFrame(
-                        [[formatted_datetime, condition, dissolving_time, memo]],
-                        columns=["날짜 및 시간", "조건 (그룹)", "용해 시간(초)", "메모"]
-                    )
-                    
-                    st.session_state.experiment_data = pd.concat([st.session_state.experiment_data, new_data], ignore_index=True)
-                    save_data()
-                    
-                    st.session_state.messages.append({"role": "assistant", "content": f"✅ {condition}에서의 용해 시간({dissolving_time:.1f}초)이 저장되었습니다! 다른 조건이나 반복 실험을 기록해 보세요."})
-                    
-                    st.session_state.show_record_form = False 
-                    st.rerun()
-
-def show_results():
-    """결과 그래프, 분석, 교육적 해석을 표시합니다."""
-    
-    df = st.session_state.experiment_data.copy()
-    
-    if df.empty:
-        response_content = "아직 기록된 실험이 없어요. 😢 먼저 '실험 기록하기' 버튼을 눌러 시간을 기록해주세요."
-        st.session_state.messages.append({"role": "assistant", "content": response_content})
-        st.rerun() 
-        return
-
-    # --- 데이터 전처리 및 분석 시작 ---
-    try:
-        # 그룹별 평균 용해 시간 계산 (챗봇의 핵심 분석 기능)
-        analysis_df = df.groupby('조건 (그룹)')['용해 시간(초)'].mean().reset_index()
-        analysis_df.columns = ['조건 (그룹)', '평균 용해 시간 (초)']
-        analysis_df = analysis_df.set_index('조건 (그룹)').round(1)
-        
-        # 그래프 데이터
-        chart_df = analysis_df.copy()
-
-        # --- Educational Analysis (용해 속도 분석) ---
-        
-        # 두 그룹 모두 데이터가 있는지 확인
-        hot_time = analysis_df.loc['🔥 뜨거운 물']['평균 용해 시간 (초)'] if '🔥 뜨거운 물' in analysis_df.index else np.nan
-        cold_time = analysis_df.loc['🧊 찬 물']['평균 용해 시간 (초)'] if '🧊 찬 물' in analysis_df.index else np.nan
-        
-        
-        if pd.isna(hot_time) or pd.isna(cold_time):
-            interpretation = "정확한 비교 분석을 위해서는 **뜨거운 물**과 **찬 물** 조건 모두에서 기록이 필요합니다. ⏱️"
-        else:
-            if hot_time < cold_time * 0.8: # 뜨거운 물이 20% 이상 빠를 때 (정상 결과)
-                time_diff = cold_time - hot_time
+            <div class="flex items-center space-x-3">
+                <!-- New help button: Visible only in conversation mode and when no quiz options are present -->
+                <button id="help-button" 
+                        class="p-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl shadow-lg transition duration-150 ease-in-out hidden disabled:opacity-50 text-sm whitespace-nowrap">
+                    모르겠어요 🇰🇷
+                </button>
                 
-                # **5학년 교과서 개념 반영:** 용질, 용매, 용해 속도 증가 원리 설명
-                interpretation = (
-                    f"🎉 **용해 속도 분석 결과!** (5학년 과학 개념 적용)\n\n"
-                    f"챗봇이 계산한 평균 시간은 **뜨거운 물**이 **{hot_time:.1f}초**, **찬 물**이 **{cold_time:.1f}초**로, "
-                    f"뜨거운 물이 약 **{time_diff:.1f}초** 더 빨랐어요! \n\n"
-                    f"이것은 물(용매)이 뜨거울수록 **물 분자의 움직임이 활발해지기** 때문이에요. 활발해진 용매 분자들이 설탕(용질)을 더 세고 빠르게 때려 **용해 속도**가 빨라진답니다. \n\n"
-                    f"**⭐ 과학자처럼 생각하기!** 이번 실험에서 설탕의 양, 저어준 횟수, 입자 크기 등 **온도 외의 조건들**을 똑같이 맞췄는지 확인하는 것이 중요해요. 다른 조건이 달랐다면 정확한 결론을 내릴 수 없답니다."
-                )
-            elif cold_time < hot_time * 0.8: # 예상 밖의 결과
-                interpretation = (
-                    f"🧐 **흥미로운 결과!** 챗봇이 계산한 결과, 찬물이 뜨거운 물보다 더 빨리 녹았어요! 이 결과는 과학적 예상과 반대됩니다.\n\n"
-                    f"실험 결과가 예상과 다를 때는 과학자가 되어 이유를 찾아야 해요! 혹시 **찬물의 설탕을 더 잘게 부수어 넣었거나** (입자 크기), **더 많이 저어주었나요** (저어주기)? 용해 속도에 영향을 주는 다른 요인들 때문에 이런 결과가 나올 수 있어요. 실험 조건을 다시 확인해 봅시다!"
-                )
-            else:
-                interpretation = "두 물의 평균 용해 시간이 비슷하네요. 아마도 물의 온도 차이가 크지 않았거나, 실험 조건을 완벽하게 통제하지 못했을 수 있어요. 온도 차이를 더 크게 하거나, 다른 요인들(저어주기, 입자 크기)을 똑같이 맞추어 다시 실험해 봅시다! 🌡️"
+                <input type="text" id="user-input" placeholder="여기에 영어로 답변을 입력해 주세요!"
+                       class="flex-grow p-3 border-2 border-indigo-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-base shadow-md">
+                <button id="send-button"
+                        class="p-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition duration-150 ease-in-out disabled:opacity-50">
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Chatbot Logic -->
+    <script type="module">
+        // Import necessary Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // --- Firebase Setup (Required for Canvas Environment) ---
+        setLogLevel('Debug');
+
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const __initial_auth_token = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : undefined;
+
+        let auth;
+        let isAuthReady = false;
+
+        if (Object.keys(firebaseConfig).length > 0) {
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+
+            async function authenticate() {
+                try {
+                    if (__initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    console.log("Firebase Authentication successful.");
+                    isAuthReady = true;
+                } catch (error) {
+                    console.error("Firebase Auth Error:", error);
+                }
+            }
+            authenticate();
+        } else {
+            console.warn("Firebase config not found. Running in standalone mode.");
+            isAuthReady = true; 
+        }
+
+        // --- Chatbot Logic ---
+        
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+        const apiKey = ""; 
+
+        const chatHistoryElement = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const inputControlArea = document.getElementById('input-control-area');
+        const mainAppContainer = document.getElementById('main-app-container');
+        const optionContainer = document.getElementById('option-container'); 
+        const helpButton = document.getElementById('help-button'); // Get the new help button
+
+        // Global State for Phase Tracking
+        let isConversationMode = false;
+        let finalReportText = null; // Stores the AI-generated report text
+
+        // Function to update help button visibility
+        function updateHelpButtonVisibility() {
+            const isQuizActive = optionContainer.children.length > 0;
+            const isReportActive = mainAppContainer.querySelector('.results-page-container');
             
+            // Show help button only if in conversation mode (Phase 2) and no other interactive element is present
+            if (isConversationMode && !isQuizActive && !isReportActive) {
+                helpButton.classList.remove('hidden');
+            } else {
+                helpButton.classList.add('hidden');
+            }
+        }
 
-    except Exception as e:
-        # 데이터 처리 중 발생하는 예상치 못한 오류를 잡아 사용자에게 안내
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": f"⚠️ **데이터 분석 중 심각한 오류가 발생했습니다.** 😭\n\n데이터 파일(`{DATA_FILE}`)의 내용이 손상되었을 수 있습니다. 오류 상세 내용: `{e}`"
-        })
-        st.rerun()
-        return
+        // UPDATED system instruction: Removed '**' markers and added emoji/tone directives
+        const systemInstruction = {
+            parts: [{
+                text: "You are 'Koni', a friendly, encouraging English tutor for elementary students. Use a soft, positive tone in all messages. Use Korean when giving instructions, encouragement, or clarity checks, and use English for core questions and feedback. Use friendly emojis (like 😊, ✨, 📚, 💡) in your responses." +
+                      "Your goal is to guide the student through three phases: 1. Quiz (Initial Review), 2. Conversation (Free Practice), and 3. Final Report. " +
+                      "Phase 1 (Initial 4 turns): Immediately start the quiz after the initial greeting/first user input. Announce the quiz in Korean. Ask 4 alternating simple quiz questions. Question types MUST cover: 1) Korean subject name -> English, 2) English subject name -> Korean, 3) Question Pattern (e.g., '좋아하는 과목을 묻는 영어 표현은?'), 4) Statement Pattern (e.g., ''나는 미술을 좋아해' 영어 표현은?'). " +
+                      "Crucial Rule for Quiz Questions (Phase 1): You MUST output the question followed by the exact marker `##OPTIONS##` and a pipe-separated list of 3 distinct subject options or phrase options (one correct, two incorrect). Example: `좋아하는 과목을 묻는 영어 표현은? ##OPTIONS##: What subject do you like? | What is your favorite subject? | What's your name?`. Do NOT send any other message until the student responds. " +
+                      "Phase 2 (Next 4 turns): After the 4th quiz question is answered, announce the transition to free conversation in Korean (e.g., 'Great job! 퀴즈 잘했어! 이제 자유 대화를 해보자. What is your favorite subject?'). " +
+                      "Crucial Rule for Sentence Completion (Phase 2): If the student replies with a single word or a short, incomplete phrase (e.g., 'Math', 'P.E.', 'like English'), you MUST complete the sentence for them (e.g., 'Ah, you mean 'My favorite subject is Math.' That's awesome!'). You must track internally how many times you provided this sentence completion guidance. If the student sends the special command 'ACTION: NEED SUBJECT NAME HELP', you must respond in Korean asking '무슨 과목에 대해 이야기하고 싶니? 한국어로 말해줘. (What subject do you want to talk about? Tell me in Korean.)'. If the student replies with a Korean subject name immediately following this Korean prompt, you MUST provide the English word for the subject and then say '이제 너가 한번 써봐! (Now, you try writing it!)' in a friendly, encouraging tone. Do NOT switch to the final report until the 8th turn is completed." +
+                      "Phase 3 (Final Output): After the 4th conversation turn in Phase 2, generate a single, comprehensive report starting with the exact marker '## FINAL REPORT ##'. This report MUST be written primarily in Korean and include: 1) A confirmation of the student's favorite subject from Phase 2. 2) A summary of the quiz performance from Phase 1 (e.g., '총 4문제 중 3문제를 맞혔습니다.'). 3) A specific section for Sentence Completion Guidance based on your internal tracking (e.g., '자유 대화 중 문장 완성 지도가 2회 제공되었습니다.'). 4) A concluding encouraging remark to the student. Do NOT send any other message after the report. You can use brief Korean sentences for instructions, encouragement, or to clarify a quiz question to help the student understand easily."
+            }]
+        };
+
+        let conversationHistory = [
+            { role: "model", parts: [{ text: "Hello! I'm Koni, your English tutor. Nice to meet you! 😊 오늘 배운 내용을 복습 퀴즈로 먼저 확인해보자! 준비됐니? (Are you ready?)" }] }
+        ];
+
+        // --- Final Report Renderer Function ---
+        function renderFinalReport(reportText) {
+            // 1. Extract Data using Regex
+            const quizMatch = reportText.match(/총 (\d+)문제 중 (\d+)문제를 맞혔습니다/);
+            const guidanceMatch = reportText.match(/문장 완성 지도가 (\d+)회 제공되었습니다/);
+
+            const totalQuestions = quizMatch ? parseInt(quizMatch[1]) : 4;
+            const correctAnswers = quizMatch ? parseInt(quizMatch[2]) : 0;
+            const guidanceCount = guidanceMatch ? parseInt(guidanceMatch[1]) : 0;
+            
+            // Clean up report text, replacing the markers with a newline for cleaner presentation
+            const remarkText = reportText.replace(/## FINAL REPORT ##|\n총 \d+문제 중 \d+문제를 맞혔습니다\./g, '')
+                                         .replace(/\n자유 대화 중 문장 완성 지도가 \d+회 제공되었습니다\./g, '')
+                                         .trim();
+
+            // 2. Prepare UI for Report View
+            mainAppContainer.innerHTML = '';
+            mainAppContainer.classList.remove('overflow-hidden', 'flex-col', 'flex-grow');
+            mainAppContainer.classList.add('justify-center', 'items-center', 'p-6', 'results-page-container', 'flex');
+            document.body.classList.remove('flex-col');
+            document.body.classList.add('flex', 'justify-center', 'items-center');
+            
+            // 3. Build the Results Card
+            const resultsCard = document.createElement('div');
+            resultsCard.className = 'w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 sm:p-10 text-center border-4 border-indigo-400';
+            
+            // Calculate percentage for chart bar
+            const quizPercent = (correctAnswers / totalQuestions) * 100;
+            
+            // Title & Student ID
+            resultsCard.innerHTML = `
+                <h2 class="text-4xl font-extrabold text-indigo-600 mb-2">🎉 학습 완료 보고서! ✨</h2>
+                <p class="text-gray-600 mb-6 font-semibold">Koni 튜터와의 신나는 수업 결과를 확인하세요!</p>
+                <div class="text-xs text-gray-400 mb-6">Student ID: ${auth.currentUser?.uid || 'N/A'}</div>
+
+                <div class="space-y-6">
+                    <!-- Quiz Result Card (with Chart) -->
+                    <div class="p-5 bg-purple-50 rounded-xl border-2 border-purple-300 shadow-lg">
+                        <h3 class="text-xl font-bold text-purple-700 mb-4 flex items-center justify-center">📚 퀴즈 정답률</h3>
+                        <p class="text-5xl font-extrabold text-purple-500 mb-3">${correctAnswers} / ${totalQuestions} 문제</p>
+                        <div class="w-full h-8 bg-gray-200 rounded-full overflow-hidden mt-4">
+                            <div class="h-full bg-green-500 transition-all duration-1000 ease-out flex items-center justify-center text-sm font-bold text-white shadow-inner" 
+                                style="width: ${quizPercent}%;">
+                                정답률: ${quizPercent.toFixed(0)}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Guidance Result Card -->
+                    <div class="p-5 bg-yellow-50 rounded-xl border-2 border-yellow-300 shadow-lg">
+                        <h3 class="text-xl font-bold text-yellow-700 mb-3 flex items-center justify-center">💡 문장 완성 지도 횟수</h3>
+                        <p class="text-5xl font-extrabold text-yellow-500">${guidanceCount} 회</p>
+                        <p class="text-sm text-gray-500 mt-2">횟수가 낮을수록 유창하게 문장을 구사했습니다. (자유 대화 기준)</p>
+                    </div>
+
+                    <!-- AI's Remark -->
+                    <div class="p-4 bg-gray-100 rounded-xl border border-gray-300 text-left shadow-inner">
+                        <h3 class="text-lg font-bold text-gray-700 mb-2 flex items-center">⭐ Koni의 튜터링 코멘트</h3>
+                        <p class="text-gray-700 whitespace-pre-wrap leading-relaxed">${remarkText}</p>
+                    </div>
+                </div>
+                
+                <!-- Teacher Action -->
+                <div class="mt-8">
+                    <h3 class="text-xl font-bold text-gray-700 mb-3 flex items-center justify-center">📧 교사에게 결과 전송</h3>
+                    <button id="transmit-final-button" class="w-full py-4 bg-pink-500 hover:bg-pink-600 text-white font-bold text-xl rounded-xl shadow-xl transition duration-200 disabled:opacity-50">
+                        결과 전송하기
+                    </button>
+                    <p id="completion-message" class="text-green-600 font-extrabold text-xl mt-4 hidden flex items-center justify-center">
+                        ✅ 전송 완료! 오늘 수업은 여기서 마무리합니다. 안녕! 👋
+                    </p>
+                </div>
+            `;
+
+            mainAppContainer.appendChild(resultsCard);
+
+            // 4. Attach event listener to the Transmit button
+            document.getElementById('transmit-final-button').onclick = (e) => {
+                e.target.disabled = true;
+                e.target.textContent = '전송 중... 🚀';
+                
+                // Simulate API call or transmission delay
+                setTimeout(() => {
+                    e.target.classList.remove('bg-pink-500', 'hover:bg-pink-600');
+                    e.target.classList.add('bg-gray-400');
+                    e.target.textContent = '전송 완료! 💌';
+                    
+                    // Show completion message
+                    document.getElementById('completion-message').classList.remove('hidden');
+                }, 1500); // 1.5 second delay for effect
+            };
+        }
+
+        // Function to create and display clickable buttons
+        function displayOptions(optionsText) {
+            optionContainer.innerHTML = ''; // Clear previous options
+            const options = optionsText.split('|').map(o => o.trim()).filter(o => o.length > 0);
+            
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.className = 'option-button flex-grow p-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl shadow-lg transition duration-150 ease-in-out text-base disabled:opacity-50';
+                button.onclick = () => handleOptionClick(option);
+                optionContainer.appendChild(button);
+            });
+
+            // Disable main text input and send button
+            userInput.disabled = true;
+            sendButton.disabled = true;
+            userInput.placeholder = '버튼을 클릭하여 답변해주세요. 👆';
+            
+            chatHistoryElement.scrollTop = chatHistoryElement.scrollHeight; // Auto-scroll to show options context
+            updateHelpButtonVisibility(); // Update help button visibility
+        }
+
+        // Function to handle button click
+        function handleOptionClick(selectedOption) {
+            optionContainer.innerHTML = ''; // Hide buttons
+            userInput.disabled = false;
+            sendButton.disabled = false;
+            userInput.placeholder = '여기에 영어로 답변을 입력해 주세요!';
+            
+            // Simulate user sending the clicked text
+            handleSend(selectedOption, true); 
+            updateHelpButtonVisibility(); // Update help button visibility
+        }
+
+        // Function to handle "I don't know" button click
+        function handleUnknownSubjectClick() {
+            // Send a special, hidden command to the AI
+            handleSend("ACTION: NEED SUBJECT NAME HELP", true);
+            updateHelpButtonVisibility(); // Hide help button while waiting for AI response
+        }
+        
+        // Attach event listener to the new button
+        helpButton.addEventListener('click', handleUnknownSubjectClick);
 
 
-    # --- Construct and Display Response ---
-    response_content = f"📊 **실시간 용해 속도 분석 리포트**\n\n{interpretation}\n\n**✅ 챗봇 분석 요약: 평균 용해 시간**"
-    
-    # Append educational message and chart data to the chat history
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": response_content,
-        "chart_data": chart_df, # 평균 용해 시간 막대 그래프
-        "dataframe": analysis_df.astype(str) # 분석 테이블
-    })
-    
-    # Clear and rerun to ensure the chat history is fully updated and displayed
-    st.rerun()
+        function createMessageElement(text, role) {
+            
+            // 1. Check for Phase transition and update state
+            if (role === 'model' && text.includes('이제 자유 대화를 해보자.')) {
+                isConversationMode = true;
+            }
+            
+            // 2. Standard Message Rendering & Option Check
+            const optionMarker = '##OPTIONS##:';
+            let messageContent = text;
+            let optionsText = null;
 
+            if (role === 'model' && text.includes(optionMarker)) {
+                const parts = text.split(optionMarker);
+                messageContent = parts[0].trim();
+                optionsText = parts[1].trim();
+            }
 
-# --- Main Interaction Logic ---
+            const messageWrapper = document.createElement('div');
+            messageWrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `p-4 mt-2 ${role === 'user' ? 'chat-bubble-user' : 'chat-bubble-koni'}`;
+            
+            if (role === 'model') {
+                const nameTag = document.createElement('p');
+                nameTag.className = 'font-bold text-indigo-700';
+                nameTag.textContent = 'Koni ✨';
+                messageBubble.appendChild(nameTag);
+            }
 
-# Handle user input from the chat bar
-if prompt := st.chat_input("무엇을 하시겠어요? ('기록' 또는 '결과 보기'라고 입력해보세요)"):
-    # Add user message to history
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.session_state.show_record_form = False # Hide form if chat is active
-    
-    # Simple keyword routing for the chatbot
-    if "기록" in prompt or "실험" in prompt:
-        st.session_state.show_record_form = True
-    elif "결과" in prompt or "보기" in prompt or "분석" in prompt:
-        show_results()
-    else:
-        # Generic response
-        response_content = "죄송해요. 😥 저는 지금 '실험 기록'과 '결과 분석'만 할 수 있어요. 둘 중 하나를 선택하거나, 아래 버튼을 눌러주세요!"
-        st.session_state.messages.append({"role": "assistant", "content": response_content})
-        st.rerun()
+            const messageText = document.createElement('p');
+            messageText.className = 'mt-1 whitespace-pre-wrap';
+            messageText.textContent = messageContent;
+            messageBubble.appendChild(messageText);
+            
+            messageWrapper.appendChild(messageBubble);
+            chatHistoryElement.appendChild(messageWrapper);
+            
+            // 4. Display options if marker was present
+            if (optionsText) {
+                displayOptions(optionsText);
+            }
+            
+            chatHistoryElement.scrollTop = chatHistoryElement.scrollHeight;
+            updateHelpButtonVisibility(); // Update help button visibility after rendering
+        }
 
+        function toggleLoading(isLoading) {
+            // Only disable input/send if options are not currently displayed
+            if (optionContainer.children.length === 0) {
+                sendButton.disabled = isLoading;
+                userInput.disabled = isLoading;
+            }
+            loadingIndicator.classList.toggle('hidden', !isLoading);
+            if (isLoading) {
+                chatHistoryElement.scrollTop = chatHistoryElement.scrollHeight;
+            }
+        }
 
-# --- Initial Screen and Button Display ---
+        async function fetchAIResponse(userText) {
+            const userMessage = { role: "user", parts: [{ text: userText }] };
+            conversationHistory.push(userMessage);
 
-# Only show action buttons if the form is not open AND it's the start or the last message was a response
-if not st.session_state.show_record_form and st.session_state.messages[-1]["role"] == "assistant":
-    st.write("---")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🧪 실험 기록하기", use_container_width=True):
-            st.session_state.messages.append({"role": "user", "content": "실험 기록하기 버튼을 눌렀어요."})
-            st.session_state.show_record_form = True # Toggle state to show form
-            st.rerun()
-    with col2:
-        if st.button("📈 결과 분석 보기", use_container_width=True):
-            st.session_state.messages.append({"role": "user", "content": "결과 분석 보기 버튼을 눌렀어요."})
-            show_results()
+            const payload = {
+                contents: conversationHistory,
+                systemInstruction: systemInstruction
+            };
 
-# Display the form if the state is set (e.g., after button click)
-if st.session_state.show_record_form:
-    display_record_form()
+            const maxRetries = 3;
+            let currentRetry = 0;
+            let aiText = "Sorry, I can't talk right now. Can you try again?";
+
+            while (currentRetry < maxRetries) {
+                try {
+                    const response = await fetch(`${API_URL}?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorBody = await response.json();
+                        console.error("API Error:", response.status, errorBody);
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts) {
+                        aiText = result.candidates[0].content.parts[0].text;
+                        break;
+                    } else {
+                        throw new Error("Invalid response structure from API.");
+                    }
+                } catch (error) {
+                    console.error(`Attempt ${currentRetry + 1} failed:`, error);
+                    currentRetry++;
+                    if (currentRetry < maxRetries) {
+                        const delay = Math.pow(2, currentRetry) * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+            }
+            
+            // --- NEW LOGIC: Intercept Final Report ---
+            if (aiText.startsWith('## FINAL REPORT ##')) {
+                finalReportText = aiText;
+                
+                // 1. Manually create Koni's final instruction message bubble (NOT logged to conversationHistory)
+                const completionMessage = "수업이 끝났어요! 🎊 대화 내용과 퀴즈 결과를 정리했어요. 아래 버튼을 눌러서 학습 결과를 확인해 보세요! 👇";
+                
+                const finalMessageWrapper = document.createElement('div');
+                finalMessageWrapper.className = `flex justify-start mt-4`;
+                const finalMessageBubble = document.createElement('div');
+                finalMessageBubble.className = 'p-4 chat-bubble-koni';
+                finalMessageBubble.innerHTML = `<p class="font-bold text-indigo-700">Koni ✨</p><p class="mt-1">${completionMessage}</p>`;
+                finalMessageWrapper.appendChild(finalMessageBubble);
+                chatHistoryElement.appendChild(finalMessageWrapper);
+
+                // 2. Add the result button to the chat history
+                const resultButtonWrapper = document.createElement('div');
+                resultButtonWrapper.className = 'flex justify-center mt-6 p-4 w-full';
+                const resultButton = document.createElement('button');
+                resultButton.textContent = '📊 결과 확인하기 (최종 보고서)';
+                resultButton.className = 'py-3 px-8 bg-pink-500 hover:bg-pink-600 text-white font-bold text-xl rounded-xl shadow-xl transition duration-200';
+                resultButton.onclick = () => renderFinalReport(finalReportText);
+                
+                resultButtonWrapper.appendChild(resultButton);
+                chatHistoryElement.appendChild(resultButtonWrapper);
+
+                // 3. Disable input controls permanently since the session is complete
+                inputControlArea.style.display = 'none'; 
+                chatHistoryElement.scrollTop = chatHistoryElement.scrollHeight;
+                return; // Stop processing, the chat ends here.
+            }
+            // --- END NEW LOGIC ---
+
+            conversationHistory.push({ role: "model", parts: [{ text: aiText }] });
+            createMessageElement(aiText, 'model');
+        }
+
+        async function handleSend(predefinedText = null, isOptionClick = false) {
+            const text = predefinedText !== null ? predefinedText : userInput.value.trim();
+            if (!text) return;
+
+            // 1. Display user message (only if not an option click, or if we want to show the clicked text)
+            if (predefinedText !== null || !isOptionClick) {
+                 createMessageElement(text, 'user');
+            }
+           
+            userInput.value = '';
+
+            // 2. Start loading and disable input
+            toggleLoading(true);
+
+            // 3. Get AI response
+            await fetchAIResponse(text);
+
+            // 4. Stop loading and enable input (only if no new options are displayed and input area is still visible)
+            if (optionContainer.children.length === 0 && inputControlArea.style.display !== 'none') {
+                toggleLoading(false);
+                userInput.focus();
+            }
+        }
+
+        sendButton.addEventListener('click', () => handleSend(null, false));
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !sendButton.disabled && optionContainer.children.length === 0) {
+                handleSend(null, false);
+            }
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const checkAuth = setInterval(() => {
+                if (isAuthReady) {
+                    clearInterval(checkAuth);
+                    userInput.focus();
+                    sendButton.disabled = false; 
+                }
+            }, 100);
+        });
+
+    </script>
+</body>
+</html>
