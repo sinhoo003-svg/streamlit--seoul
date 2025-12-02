@@ -46,9 +46,7 @@ def get_ai_response(history):
         "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION_TEXT}]},
     }
     
-    # 캐시를 무력화하고 새로운 요청을 보냅니다.
-    # st.cache_data를 사용하고 있지만, 실제 API 호출은 여기서 이루어집니다.
-    response_text = "Sorry, I can't talk right now. Can you try again? (API Error)"
+    response_text = "죄송해요! 😭 지금 Sinu 튜터가 잠시 아파서 대화를 이어갈 수가 없어요. 잠시 후에 다시 시도해 줄래? 💡"
     
     max_retries = 3
     for attempt in range(max_retries):
@@ -64,11 +62,13 @@ def get_ai_response(history):
                 else:
                     raise ValueError("Invalid response structure from API.")
         except Exception as e:
+            # API 권한 오류(403) 또는 연결 오류가 발생했을 때 처리
             st.error(f"API 호출 중 오류 발생 (시도 {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
             else:
-                return response_text
+                # 최종 시도 실패 시 사용자 친화적인 메시지 반환
+                return "죄송해요! 😭 지금 Sinu 튜터가 잠시 아파서 대화를 이어갈 수가 없어요. 잠시 후에 다시 시도해 줄래? 💡"
     return response_text
 
 # --- 메시지 처리 로직 ---
