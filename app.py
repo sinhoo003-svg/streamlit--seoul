@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>초등 영어 튜터 챗봇 (Koni)</title>
+    <title>초등 영어 튜터 챗봇 (Sinu)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -14,18 +14,24 @@
             background-color: #eef2ff; /* Very Light Lavender Background */
         }
         .chat-bubble-koni {
-            /* 수정: rem 단위를 소수점이 없는 px 단위로 변경하여 SyntaxError 방지 */
+            /* 수정: 복잡한 border-radius를 개별 속성으로 분리하여 파서 오류 방지 */
             background-color: #cffafe; /* Soft Cyan/Aqua */
-            border-radius: 20px 20px 20px 8px; 
+            border-top-left-radius: 20px; 
+            border-top-right-radius: 20px;
+            border-bottom-right-radius: 20px;
+            border-bottom-left-radius: 8px; /* 챗봇 말풍선 뾰족한 부분 */
             max-width: 85%;
             align-self: flex-start;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         .chat-bubble-user {
-            /* 수정: rem 단위를 소수점이 없는 px 단위로 변경하여 SyntaxError 방지 */
+            /* 수정: 복잡한 border-radius를 개별 속성으로 분리하여 파서 오류 방지 */
             background-color: #6366f1; /* Deep Indigo/Purple */
             color: white;
-            border-radius: 20px 20px 8px 20px;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            border-bottom-right-radius: 8px; /* 사용자 말풍선 뾰족한 부분 */
+            border-bottom-left-radius: 20px;
             max-width: 85%;
             align-self: flex-end;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -75,24 +81,24 @@
         <!-- Header -->
         <header class="p-4 sm:p-6 bg-indigo-500 text-white shadow-lg flex justify-between items-center" id="app-header">
             <h1 class="text-2xl sm:text-3xl font-extrabold flex items-center">
-                <span class="mr-2 text-3xl">🤖</span> Koni 영어 튜터링 시간!
+                <span class="mr-2 text-3xl">🌟</span> Sinu 영어 튜터링 시간!
             </h1>
             <p class="text-sm opacity-90 mt-1 hidden sm:block">신나는 "좋아하는 과목" 대화 연습! 😊</p>
         </header>
 
         <!-- Chat History -->
         <main id="chat-history" class="flex-grow p-4 sm:p-6 space-y-5 overflow-y-auto">
-            <!-- Initial Message from Koni -->
+            <!-- Initial Message from Sinu -->
             <div class="flex justify-start">
                 <div class="p-4 chat-bubble-koni">
-                    <p class="font-bold text-indigo-700">Koni ✨</p>
-                    <p class="mt-1">Hello! I'm Koni, your English tutor. Nice to meet you! 😊 오늘 배운 내용을 복습 퀴즈로 먼저 확인해보자! 준비됐니? (Are you ready?)</p>
+                    <p class="font-bold text-indigo-700">Sinu ⭐</p>
+                    <p class="mt-1">Hello! I'm Sinu, your English tutor. Nice to meet you! 😊 오늘 배운 내용을 복습 퀴즈로 먼저 확인해보자! 준비됐니? (Are you ready?)</p>
                 </div>
             </div>
             <!-- Loading indicator placeholder -->
             <div id="loading-indicator" class="hidden flex justify-start">
                 <div class="p-3 bg-gray-100 text-gray-500 rounded-lg shadow-inner">
-                    <p>Koni가 생각 중이야... 잠시만 기다려줘! 💡</p>
+                    <p>Sinu가 생각 중이야... 잠시만 기다려줘! 💡</p>
                 </div>
             </div>
             <!-- Dynamic Report Content will replace this area -->
@@ -190,10 +196,10 @@
             }
         }
 
-        // System Instruction: Updated tutor name and symbol (Keeping Koni and adjusting symbols)
+        // System Instruction: Updated tutor name to 'Sinu' and symbol to '⭐'
         const systemInstruction = {
             parts: [{
-                text: "You are 'Koni', a friendly, encouraging English tutor for elementary students. Use a soft, positive tone in all messages. Use Korean when giving instructions, encouragement, or clarity checks, and use English for core questions and feedback. Use friendly emojis (like 😊, ✨, 📚, 💡) in your responses." +
+                text: "You are 'Sinu', a friendly, encouraging English tutor for elementary students. Use a soft, positive tone in all messages. Use Korean when giving instructions, encouragement, or clarity checks, and use English for core questions and feedback. Use friendly emojis (like 😊, ✨, 📚, 💡) in your responses." +
                       "Your goal is to guide the student through three phases: 1. Quiz (Initial Review), 2. Conversation (Free Practice), and 3. Final Report. " +
                       "Phase 1 (Initial 4 turns): Immediately start the quiz after the initial greeting/first user input. Announce the quiz in Korean. Ask 4 alternating simple quiz questions. Question types MUST cover: 1) Korean subject name -> English, 2) English subject name -> Korean, 3) Question Pattern (e.g., '좋아하는 과목을 묻는 영어 표현은?'), 4) Statement Pattern (e.g., ''나는 미술을 좋아해' 영어 표현은?'). " +
                       "Crucial Rule for Quiz Questions (Phase 1): You MUST output the question followed by the exact marker `##OPTIONS##` and a pipe-separated list of 3 distinct subject options or phrase options (one correct, two incorrect). Example: `좋아하는 과목을 묻는 영어 표현은? ##OPTIONS##: What subject do you like? | What is your favorite subject? | What's your name?`. Do NOT send any other message until the student responds. " +
@@ -205,7 +211,7 @@
 
         let conversationHistory = [
             // Updated tutor name
-            { role: "model", parts: [{ text: "Hello! I'm Koni, your English tutor. Nice to meet you! 😊 오늘 배운 내용을 복습 퀴즈로 먼저 확인해보자! 준비됐니? (Are you ready?)" }] }
+            { role: "model", parts: [{ text: "Hello! I'm Sinu, your English tutor. Nice to meet you! 😊 오늘 배운 내용을 복습 퀴즈로 먼저 확인해보자! 준비됐니? (Are you ready?)" }] }
         ];
 
         // --- Final Report Renderer Function ---
@@ -240,7 +246,7 @@
             // Title & Student ID
             resultsCard.innerHTML = `
                 <h2 class="text-4xl font-extrabold text-indigo-600 mb-2">🎉 학습 완료 보고서! ✨</h2>
-                <p class="text-gray-600 mb-6 font-semibold">Koni 튜터와의 신나는 수업 결과를 확인하세요!</p>
+                <p class="text-gray-600 mb-6 font-semibold">Sinu 튜터와의 신나는 수업 결과를 확인하세요!</p>
                 <div class="text-xs text-gray-400 mb-6">Student ID: ${auth.currentUser?.uid || 'N/A'}</div>
 
                 <div class="space-y-6">
@@ -265,7 +271,7 @@
 
                     <!-- AI's Remark -->
                     <div class="p-4 bg-gray-100 rounded-xl border border-gray-300 text-left shadow-inner">
-                        <h3 class="text-lg font-bold text-gray-700 mb-2 flex items-center">⭐ Koni의 튜터링 코멘트</h3>
+                        <h3 class="text-lg font-bold text-gray-700 mb-2 flex items-center">⭐ Sinu의 튜터링 코멘트</h3>
                         <p class="text-gray-700 whitespace-pre-wrap leading-relaxed">${remarkText}</p>
                     </div>
                 </div>
@@ -373,7 +379,7 @@
             if (role === 'model') {
                 const nameTag = document.createElement('p');
                 nameTag.className = 'font-bold text-indigo-700';
-                nameTag.textContent = 'Koni ✨';
+                nameTag.textContent = 'Sinu ⭐';
                 messageBubble.appendChild(nameTag);
             }
 
@@ -455,14 +461,14 @@
             if (aiText.startsWith('## FINAL REPORT ##')) {
                 finalReportText = aiText;
                 
-                // 1. Manually create Koni's final instruction message bubble (NOT logged to conversationHistory)
+                // 1. Manually create Sinu's final instruction message bubble (NOT logged to conversationHistory)
                 const completionMessage = "수업이 끝났어요! 🎊 대화 내용과 퀴즈 결과를 정리했어요. 아래 버튼을 눌러서 학습 결과를 확인해 보세요! 👇";
                 
                 const finalMessageWrapper = document.createElement('div');
                 finalMessageWrapper.className = `flex justify-start mt-4`;
                 const finalMessageBubble = document.createElement('div');
                 finalMessageBubble.className = 'p-4 chat-bubble-koni';
-                finalMessageBubble.innerHTML = `<p class="font-bold text-indigo-700">Koni ✨</p><p class="mt-1">${completionMessage}</p>`;
+                finalMessageBubble.innerHTML = `<p class="font-bold text-indigo-700">Sinu ⭐</p><p class="mt-1">${completionMessage}</p>`;
                 finalMessageWrapper.appendChild(finalMessageBubble);
                 chatHistoryElement.appendChild(finalMessageWrapper);
 
