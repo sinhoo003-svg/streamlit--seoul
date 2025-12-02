@@ -14,24 +14,24 @@
             background-color: #eef2ff; /* Very Light Lavender Background */
         }
         .chat-bubble-koni {
-            /* 수정: 복잡한 border-radius를 개별 속성으로 분리하여 파서 오류 방지 */
+            /* 수정: 안전한 정수(25px, 10px)와 !important를 사용하여 파서 오류 방지 */
             background-color: #cffafe; /* Soft Cyan/Aqua */
-            border-top-left-radius: 20px; 
-            border-top-right-radius: 20px;
-            border-bottom-right-radius: 20px;
-            border-bottom-left-radius: 8px; /* 챗봇 말풍선 뾰족한 부분 */
+            border-top-left-radius: 25px !important; 
+            border-top-right-radius: 25px !important;
+            border-bottom-right-radius: 25px !important;
+            border-bottom-left-radius: 10px !important; /* 챗봇 말풍선 뾰족한 부분 */
             max-width: 85%;
             align-self: flex-start;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         .chat-bubble-user {
-            /* 수정: 복잡한 border-radius를 개별 속성으로 분리하여 파서 오류 방지 */
+            /* 수정: 안전한 정수(25px, 10px)와 !important를 사용하여 파서 오류 방지 */
             background-color: #6366f1; /* Deep Indigo/Purple */
             color: white;
-            border-top-left-radius: 20px;
-            border-top-right-radius: 20px;
-            border-bottom-right-radius: 8px; /* 사용자 말풍선 뾰족한 부분 */
-            border-bottom-left-radius: 20px;
+            border-top-left-radius: 25px !important;
+            border-top-right-radius: 25px !important;
+            border-bottom-right-radius: 10px !important; /* 사용자 말풍선 뾰족한 부분 */
+            border-bottom-left-radius: 25px !important;
             max-width: 85%;
             align-self: flex-end;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
