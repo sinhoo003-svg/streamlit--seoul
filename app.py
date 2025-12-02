@@ -14,16 +14,18 @@
             background-color: #eef2ff; /* Very Light Lavender Background */
         }
         .chat-bubble-koni {
+            /* 수정: rem 단위를 소수점이 없는 px 단위로 변경하여 SyntaxError 방지 */
             background-color: #cffafe; /* Soft Cyan/Aqua */
-            border-radius: 1.25rem 1.25rem 1.25rem 0.5rem;
+            border-radius: 20px 20px 20px 8px; 
             max-width: 85%;
             align-self: flex-start;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         .chat-bubble-user {
+            /* 수정: rem 단위를 소수점이 없는 px 단위로 변경하여 SyntaxError 방지 */
             background-color: #6366f1; /* Deep Indigo/Purple */
             color: white;
-            border-radius: 1.25rem 1.25rem 0.5rem 1.25rem;
+            border-radius: 20px 20px 8px 20px;
             max-width: 85%;
             align-self: flex-end;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
