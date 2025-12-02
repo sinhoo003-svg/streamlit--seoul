@@ -11,26 +11,24 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #eef2ff; /* Very Light Lavender Background */
+            background-color: #eef2ff;
         }
         .chat-bubble-koni {
-            /* 수정: 안전한 정수(25px, 10px)와 !important를 사용하여 파서 오류 방지 */
-            background-color: #cffafe; /* Soft Cyan/Aqua */
+            background-color: #cffafe;
             border-top-left-radius: 25px !important; 
             border-top-right-radius: 25px !important;
             border-bottom-right-radius: 25px !important;
-            border-bottom-left-radius: 10px !important; /* 챗봇 말풍선 뾰족한 부분 */
+            border-bottom-left-radius: 10px !important;
             max-width: 85%;
             align-self: flex-start;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         .chat-bubble-user {
-            /* 수정: 안전한 정수(25px, 10px)와 !important를 사용하여 파서 오류 방지 */
-            background-color: #6366f1; /* Deep Indigo/Purple */
+            background-color: #6366f1;
             color: white;
             border-top-left-radius: 25px !important;
             border-top-right-radius: 25px !important;
-            border-bottom-right-radius: 10px !important; /* 사용자 말풍선 뾰족한 부분 */
+            border-bottom-right-radius: 10px !important;
             border-bottom-left-radius: 25px !important;
             max-width: 85%;
             align-self: flex-end;
@@ -39,7 +37,7 @@
         /* Custom scrollbar for chat history */
         #chat-history {
             scrollbar-width: thin;
-            scrollbar-color: #a78bfa #f3f4f6; /* Soft Purple scrollbar */
+            scrollbar-color: #a78bfa #f3f4f6;
         }
         #chat-history::-webkit-scrollbar {
             width: 8px;
@@ -59,14 +57,14 @@
         .option-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 10px rgba(0,0,0,0.2);
-            border-color: #8b5cf6; /* Ring effect on hover */
+            border-color: #8b5cf6;
         }
         .results-page-container {
             min-height: 100vh;
         }
         /* Style for the help button */
         #help-button {
-            background-color: #f87171; /* Soft Red */
+            background-color: #f87171;
         }
         #help-button:hover {
             background-color: #ef4444;
