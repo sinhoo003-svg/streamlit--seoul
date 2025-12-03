@@ -3,9 +3,12 @@ import requests
 import json
 import time
 import re
-from config import get_gemini_api_key # 중앙 설정 파일에서 API 키 함수를 가져옵니다.
+import os
+from dotenv import load_dotenv
 # import pandas as pd # 챗봇 로직에 불필요하여 제거
 # import import numpy as np # 챗봇 로직에 불필요하여 제거
+
+load_dotenv() # .env 파일에서 환경 변수를 로드합니다.
 
 st.title("Sinu 영어 튜터링 시간!")
 st.markdown(
@@ -48,13 +51,22 @@ if "is_report_shown" not in st.session_state:
 if "is_help_mode" not in st.session_state:
     st.session_state.is_help_mode = False
 
+# --- 중앙 API 키 관리 ---
+# 이 함수는 앱의 어느 곳에서나 호출하여 API 키를 안전하게 불러올 수 있습니다.
+def get_gemini_api_key():
+    """
+    .env 파일에서 GOOGLE_API_KEY를 불러옵니다.
+    키가 없으면 None을 반환합니다.
+    """
+    return os.getenv("GOOGLE_API_KEY")
+
 # --- Gemini API 호출 함수 ---
 def get_ai_response(history):
     """Gemini API를 호출하고 응답을 받습니다."""
     API_KEY = get_gemini_api_key() # 중앙 설정 함수를 통해 API 키를 가져옵니다.
 
     if not API_KEY:
-        st.error("API 키가 설정되지 않았습니다. Streamlit secrets에 'GEMINI_API_KEY'를 추가해주세요.")
+        st.error("API 키가 설정되지 않았습니다. .env 파일에 'GOOGLE_API_KEY'를 추가해주세요.")
         return "죄송해요! Sinu 튜터가 시스템 문제로 잠시 쉬고 있어요. (API Key is missing)"
 
     payload = {
@@ -91,8 +103,7 @@ def process_message(user_input, is_option_click=False):
     if not user_input.strip() and not is_option_click:
         return
 
-    # 사용자의 모든 입력을 채팅 기록에 추가하여 AI가 볼 수 있도록 합니다.
-    st.session_state.chat_history.append({"role": "user", "parts": [{"text": user_input}]})
+    st.session_state.chat_history.append({"role": "user", "parts": [{"text": user_input}]}) # 사용자의 모든 입력을 채팅 기록에 추가합니다.
 
     # AI 응답을 받아옵니다.
     ai_response_text = get_ai_response(st.session_state.chat_history)
