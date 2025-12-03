@@ -24,7 +24,7 @@ st.markdown(
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent"
 
 # API_KEY 로딩: 사용자 요청에 따라 키를 직접 코드에 대입 (Streamlit 환경 문제 해결 목적)
-API_KEY = "AIzaSyDEfc8MbaVuFI6kr506oUY-DfLooZNq_Ac"
+API_KEY = "AIzaSyAQ_bBGH7z9qACYeBLhPF58vVIjo4ia-Ks"
 
 # Sinu 튜터 시스템 지침 (4 퀴즈 + 2 대화, 총 6턴 유지)
 SYSTEM_INSTRUCTION_TEXT = (
@@ -284,4 +284,5 @@ def app_main():
 
 if __name__ == "__main__":
     app_main()
+
 
