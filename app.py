@@ -5,10 +5,6 @@ import time
 import re
 import os
 
-# --- 사용자 요청 시작 코드 ---
-st.write("Streamlit supports a wide range of data visualizations, including [Plotly, Altair, and Bokeh charts](https://docs.streamlit.io/develop/api-reference/charts). 📊 And with over 20 input widgets, you can easily make your data interactive!")
-# ---------------------------
-
 st.title("Sinu 영어 튜터링 시간!")
 st.markdown(
     """
