@@ -3,9 +3,12 @@ import requests
 import json
 import time
 import re
-from config import get_gemini_api_key # 중앙 설정 파일에서 API 키 함수를 가져옵니다.
+import os
+from dotenv import load_dotenv
 # import pandas as pd # 챗봇 로직에 불필요하여 제거
 # import import numpy as np # 챗봇 로직에 불필요하여 제거
+
+load_dotenv() # .env 파일에서 환경 변수를 로드합니다.
 
 st.title("Sinu 영어 튜터링 시간!")
 st.markdown(
@@ -48,13 +51,22 @@ if "is_report_shown" not in st.session_state:
 if "is_help_mode" not in st.session_state:
     st.session_state.is_help_mode = False
 
+# --- 중앙 API 키 관리 ---
+# 이 함수는 앱의 어느 곳에서나 호출하여 API 키를 안전하게 불러올 수 있습니다.
+def get_gemini_api_key():
+    """
+    .env 파일에서 GOOGLE_API_KEY를 불러옵니다.
+    키가 없으면 None을 반환합니다.
+    """
+    return os.getenv("GOOGLE_API_KEY")
+
 # --- Gemini API 호출 함수 ---
 def get_ai_response(history):
     """Gemini API를 호출하고 응답을 받습니다."""
     API_KEY = get_gemini_api_key() # 중앙 설정 함수를 통해 API 키를 가져옵니다.
 
     if not API_KEY:
-        st.error("API 키가 설정되지 않았습니다. Streamlit secrets에 'GEMINI_API_KEY'를 추가해주세요.")
+        st.error("API 키가 설정되지 않았습니다. .env 파일에 'GOOGLE_API_KEY'를 추가해주세요.")
         return "죄송해요! Sinu 튜터가 시스템 문제로 잠시 쉬고 있어요. (API Key is missing)"
 
     payload = {
@@ -91,8 +103,7 @@ def process_message(user_input, is_option_click=False):
     if not user_input.strip() and not is_option_click:
         return
 
-    # 사용자의 모든 입력을 채팅 기록에 추가하여 AI가 볼 수 있도록 합니다.
-    st.session_state.chat_history.append({"role": "user", "parts": [{"text": user_input}]})
+    st.session_state.chat_history.append({"role": "user", "parts": [{"text": user_input}]}) # 사용자의 모든 입력을 채팅 기록에 추가합니다.
 
     # AI 응답을 받아옵니다.
     ai_response_text = get_ai_response(st.session_state.chat_history)
@@ -128,12 +139,18 @@ def render_final_report_page():
         return
 
     # 1. 데이터 추출 (Python 정규표현식 사용)
-    quiz_re_match = re.search(r'총 (\d+)문제 중 (\d+)문제를 맞혔습니다', report_text)
-    guidance_re_match = re.search(r'문장 완성 지도가 (\d+)회 제공되었습니다', report_text)
-    
-    total_questions = int(quiz_re_match.group(1)) if quiz_re_match else 4
-    correct_answers = int(quiz_re_match.group(2)) if quiz_re_match else 0
-    guidance_count = int(guidance_re_match.group(1)) if guidance_re_match else 0
+    total_questions, correct_answers, guidance_count = 4, 0, 0 # 기본값 설정
+    try:
+        quiz_re_match = re.search(r'총 (\d+)문제 중 (\d+)문제를 맞혔습니다', report_text)
+        guidance_re_match = re.search(r'문장 완성 지도가 (\d+)회 제공되었습니다', report_text)
+        
+        if quiz_re_match:
+            total_questions = int(quiz_re_match.group(1))
+            correct_answers = int(quiz_re_match.group(2))
+        if guidance_re_match:
+            guidance_count = int(guidance_re_match.group(1))
+    except (AttributeError, IndexError, ValueError) as e:
+        st.warning(f"보고서 데이터 파싱 중 오류가 발생했습니다: {e}")
     
     # 2. 보고서 텍스트 정리
     remark_text = report_text.replace("## FINAL REPORT ##", "").strip()
