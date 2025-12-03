@@ -4,11 +4,10 @@ import json
 import time
 import re
 import os
-from dotenv import load_dotenv
-# import pandas as pd # 챗봇 로직에 불필요하여 제거
-# import import numpy as np # 챗봇 로직에 불필요하여 제거
 
-load_dotenv() # .env 파일에서 환경 변수를 로드합니다.
+# --- 사용자 요청 시작 코드 ---
+st.write("Streamlit supports a wide range of data visualizations, including [Plotly, Altair, and Bokeh charts](https://docs.streamlit.io/develop/api-reference/charts). 📊 And with over 20 input widgets, you can easily make your data interactive!")
+# ---------------------------
 
 st.title("Sinu 영어 튜터링 시간!")
 st.markdown(
@@ -20,8 +19,12 @@ st.markdown(
 )
 
 # --- 환경 설정 및 상수 ---
-# Gemini API 설정 (캔버스 환경에서 키가 자동 제공됨)
-API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+# Gemini API 설정
+# API_URL은 안정적인 최신 모델로 설정
+API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent"
+
+# API_KEY 로딩: 사용자 요청에 따라 키를 직접 코드에 대입 (Streamlit 환경 문제 해결 목적)
+API_KEY = "AIzaSyDEfc8MbaVuFI6kr506oUY-DfLooZNq_Ac"
 
 # Sinu 튜터 시스템 지침 (4 퀴즈 + 2 대화, 총 6턴 유지)
 SYSTEM_INSTRUCTION_TEXT = (
@@ -51,23 +54,12 @@ if "is_report_shown" not in st.session_state:
 if "is_help_mode" not in st.session_state:
     st.session_state.is_help_mode = False
 
-# --- 중앙 API 키 관리 ---
-# 이 함수는 앱의 어느 곳에서나 호출하여 API 키를 안전하게 불러올 수 있습니다.
-def get_gemini_api_key():
-    """
-    .env 파일에서 GOOGLE_API_KEY를 불러옵니다.
-    키가 없으면 None을 반환합니다.
-    """
-    return os.getenv("GOOGLE_API_KEY")
-
 # --- Gemini API 호출 함수 ---
 def get_ai_response(history):
     """Gemini API를 호출하고 응답을 받습니다."""
-    API_KEY = get_gemini_api_key() # 중앙 설정 함수를 통해 API 키를 가져옵니다.
-
+    # API 키가 없으면 바로 오류 메시지 반환
     if not API_KEY:
-        st.error("API 키가 설정되지 않았습니다. .env 파일에 'GOOGLE_API_KEY'를 추가해주세요.")
-        return "죄송해요! Sinu 튜터가 시스템 문제로 잠시 쉬고 있어요. (API Key is missing)"
+        return "죄송해요! 😭 API 키가 설정되지 않아서 Sinu 튜터가 작동할 수 없어요. 관리자에게 문의해 주세요. (Key Error)"
 
     payload = {
         "contents": history,
@@ -80,21 +72,23 @@ def get_ai_response(history):
     for attempt in range(max_retries):
         try:
             with st.spinner("Sinu가 생각 중이야... 잠시만 기다려줘!"):
+                # API 호출
+                # API 키는 URL 쿼리 파라미터로 전송
                 response = requests.post(f"{API_URL}?key={API_KEY}", json=payload)
                 response.raise_for_status() # HTTP 오류 발생 시 예외 발생
                 result = response.json()
                 
                 if result.get('candidates') and result['candidates'][0]['content']['parts']:
-                    response_text = result['candidates'][0]['content']['parts'][0].get('text', '')
+                    response_text = result['candidates'][0]['content']['parts'][0]['text']
                     return response_text
                 else:
-                    # API가 콘텐츠를 반환하지 않은 경우 (예: 안전 설정에 의해 차단)
-                    st.warning("API로부터 유효한 응답을 받지 못했습니다. 응답 구조를 확인하세요.")
-                    return "음... Sinu 튜터가 잠시 생각에 잠겼어요. 다른 질문을 해줄래요?"
+                    raise ValueError("Invalid response structure from API.")
         except Exception as e:
-            st.error(f"API 호출 중 오류가 발생했습니다: {e}") # 디버깅을 위해 실제 오류를 출력합니다.
+            # 환경 문제로 인한 오류가 반복되므로, 사용자에게 노출되는 메시지는 간결하게 처리합니다.
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
+            else:
+                return "죄송해요! 지금 Sinu 튜터가 잠시 아파서 대화를 이어갈 수가 없어요. 잠시 후에 다시 시도해 줄래? (API Error)"
     return response_text
 
 # --- 메시지 처리 로직 ---
@@ -103,11 +97,12 @@ def process_message(user_input, is_option_click=False):
     if not user_input.strip() and not is_option_click:
         return
 
-    st.session_state.chat_history.append({"role": "user", "parts": [{"text": user_input}]}) # 사용자의 모든 입력을 채팅 기록에 추가합니다.
-
-    # AI 응답을 받아옵니다.
+    # 옵션 클릭이 아니거나, 헬프 모드 중인 경우에만 사용자 히스토리에 추가
+    if not is_option_click or st.session_state.is_help_mode:
+        st.session_state.chat_history.append({"role": "user", "parts": [{"text": user_input}]})
+    
     ai_response_text = get_ai_response(st.session_state.chat_history)
-
+    
     # 턴 카운트 증가 (보고서 대기 중이 아니고, 헬프 모드가 아닌 경우에만)
     if not st.session_state.is_report_ready and not st.session_state.is_help_mode:
         st.session_state.turn_count += 1
@@ -115,9 +110,7 @@ def process_message(user_input, is_option_click=False):
     if ai_response_text.startswith('## FINAL REPORT ##'):
         st.session_state.final_report_text = ai_response_text
         st.session_state.is_report_ready = True
-        # 보고서가 준비되면 AI 응답을 기록하지 않고 바로 UI를 업데이트합니다.
-        st.rerun()
-        return
+        return 
 
     # 헬프 모드 상태 업데이트
     if st.session_state.is_help_mode:
@@ -128,8 +121,9 @@ def process_message(user_input, is_option_click=False):
 
     st.session_state.chat_history.append({"role": "model", "parts": [{"text": ai_response_text}]})
     
-    # AI 응답 후 UI를 즉시 업데이트하여 사용자에게 보여줍니다.
     st.rerun()
+
+# --- UI 랜더링 함수 ---
 
 def render_final_report_page():
     """학습 완료 보고서를 시각적으로 보여줍니다."""
@@ -139,18 +133,12 @@ def render_final_report_page():
         return
 
     # 1. 데이터 추출 (Python 정규표현식 사용)
-    total_questions, correct_answers, guidance_count = 4, 0, 0 # 기본값 설정
-    try:
-        quiz_re_match = re.search(r'총 (\d+)문제 중 (\d+)문제를 맞혔습니다', report_text)
-        guidance_re_match = re.search(r'문장 완성 지도가 (\d+)회 제공되었습니다', report_text)
-        
-        if quiz_re_match:
-            total_questions = int(quiz_re_match.group(1))
-            correct_answers = int(quiz_re_match.group(2))
-        if guidance_re_match:
-            guidance_count = int(guidance_re_match.group(1))
-    except (AttributeError, IndexError, ValueError) as e:
-        st.warning(f"보고서 데이터 파싱 중 오류가 발생했습니다: {e}")
+    quiz_re_match = re.search(r'총 (\d+)문제 중 (\d+)문제를 맞혔습니다', report_text)
+    guidance_re_match = re.search(r'문장 완성 지도가 (\d+)회 제공되었습니다', report_text)
+    
+    total_questions = int(quiz_re_match.group(1)) if quiz_re_match else 4
+    correct_answers = int(quiz_re_match.group(2)) if quiz_re_match else 0
+    guidance_count = int(guidance_re_match.group(1)) if guidance_re_match else 0
     
     # 2. 보고서 텍스트 정리
     remark_text = report_text.replace("## FINAL REPORT ##", "").strip()
@@ -218,30 +206,37 @@ def render_final_report_page():
 
 def render_chat_page():
     """메인 채팅 인터페이스를 랜더링합니다."""
-
+    
     # 1. 채팅 히스토리 랜더링
     chat_container = st.container(height=450, border=True)
     with chat_container:
         for message in st.session_state.chat_history:
+            # 아바타 설정 (이모티콘 사용)
             avatar_char = "⭐" if message["role"] == "model" else "🧑‍🎓"
+            
             with st.chat_message(message["role"], avatar=avatar_char):
                 text = message["parts"][0]["text"]
+                
+                # 옵션 파싱 (Phase 1)
                 option_marker = "##OPTIONS##:"
                 if message["role"] == "model" and option_marker in text:
                     question, options_str = text.split(option_marker)
                     st.markdown(question)
+                    
+                    # 옵션 버튼을 중앙에 배치하기 위해 columns 사용
                     options = [o.strip() for o in options_str.split('|')]
                     cols = st.columns(len(options))
+                    
                     for i, option in enumerate(options):
+                        # 버튼 클릭 시 해당 옵션을 사용자 입력으로 처리
                         if cols[i].button(option, key=f"option_{st.session_state.turn_count}_{i}", use_container_width=True):
-                            # 버튼이 클릭되면 해당 값을 session_state에 저장하고 rerun합니다.
-                            # 실제 처리는 메인 로직에서 수행됩니다.
-                            st.session_state.user_input = option
-                            st.session_state.is_option_click = True
-                            st.rerun()
+                            process_message(option, is_option_click=True)
+                            
+                elif message["role"] == "model":
+                    st.markdown(f"**Sinu** | {text}")
                 else:
                     st.markdown(text)
-
+    
     # 2. 결과 확인 버튼 (Phase 3 완료 시)
     if st.session_state.is_report_ready:
         st.markdown("---")
@@ -249,16 +244,17 @@ def render_chat_page():
         if st.button("📊 결과 확인하기 (최종 보고서)", type="secondary", use_container_width=True):
             st.session_state.is_report_shown = True
             st.rerun()
-        # 결과 확인 버튼이 나타나면 아래 입력창은 더 이상 표시하지 않습니다.
-        return None, None, None
+        return
 
     # 3. 입력창 및 버튼 (Phase 1 & 2)
     col_help, col_input, col_send = st.columns([1, 4, 1])
-
+    
     # '모르겠어요' 버튼 (Phase 2에서만 활성화)
     is_conversation_phase = st.session_state.turn_count >= 4
-    help_clicked = col_help.button("모르겠어요 🇰🇷", key="help_button", disabled=not is_conversation_phase or st.session_state.is_help_mode, use_container_width=True)
-
+    
+    if col_help.button("모르겠어요 🇰🇷", key="help_button", disabled=not is_conversation_phase or st.session_state.is_help_mode, use_container_width=True):
+        process_message("ACTION: NEED SUBJECT NAME HELP", is_option_click=True)
+        
     # 사용자 입력
     user_input = col_input.text_input(
         "여기에 답변을 입력해 주세요!", 
@@ -267,33 +263,24 @@ def render_chat_page():
         label_visibility="collapsed",
         disabled=st.session_state.is_report_ready
     )
-
+    
     # 전송 버튼
-    send_clicked = col_send.button("Send", type="primary", disabled=st.session_state.is_report_ready, use_container_width=True)
+    if col_send.button("Send", type="primary", disabled=st.session_state.is_report_ready, use_container_width=True):
+        if user_input:
+            process_message(user_input)
+        
+    # Streamlit은 Enter 키 처리를 자동으로 수행하므로, 별도의 Enter 키 이벤트 핸들링은 필요하지 않습니다.
 
-    return user_input, send_clicked, help_clicked
 
 # --- 메인 앱 실행 ---
 def app_main():
     """Streamlit 애플리케이션의 메인 진입점"""
-
+    
+    # Streamlit의 메인 루프에서 실행될 내용 결정
     if st.session_state.is_report_shown:
         render_final_report_page()
     else:
-        # 1. UI를 먼저 그리고 사용자 입력을 받습니다.
-        user_input, send_clicked, help_clicked = render_chat_page()
-
-        # 2. 사용자 입력에 따라 메시지 처리 로직을 호출합니다.
-        if help_clicked:
-            process_message("ACTION: NEED SUBJECT NAME HELP", is_option_click=True)
-        elif send_clicked and user_input:
-            process_message(user_input)
-        # 옵션 버튼 클릭 처리를 위한 로직
-        elif st.session_state.get("is_option_click"):
-            option_value = st.session_state.get("user_input", "")
-            st.session_state.is_option_click = False # 처리 후 플래그 리셋
-            st.session_state.user_input = "" # 처리 후 입력값 리셋
-            process_message(option_value, is_option_click=True)
+        render_chat_page()
 
 if __name__ == "__main__":
     app_main()
