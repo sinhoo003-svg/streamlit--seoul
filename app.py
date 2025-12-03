@@ -25,7 +25,7 @@ API_KEY = st.secrets.get("GEMINI_API_KEY")
 # API 키가 설정되지 않았을 경우, 보안을 위해 앱 실행을 중단하고 명확한 안내를 제공합니다.
 if not API_KEY:
     st.error("🚨 중요: Gemini API 키가 설정되지 않았습니다! 앱을 실행할 수 없습니다.")
-    st.info("배포 환경에서는 Streamlit Secrets에 'GEMINI_API_KEY'를 추가하고, 로컬 환경에서는 '.streamlit/secreats.toml' 파일을 설정해주세요.")
+    st.info("배포 환경에서는 Streamlit Secrets에 'GEMINI_API_KEY'를 추가하고, 로컬 환경에서는 '.streamlit/secrets.toml' 파일을 설정해주세요.")
     st.stop()
 # Sinu 튜터 시스템 지침 (4 퀴즈 + 2 대화, 총 6턴 유지)
 SYSTEM_INSTRUCTION_TEXT = (
@@ -285,4 +285,5 @@ def app_main():
 
 if __name__ == "__main__":
     app_main()
+
 
