@@ -1,6 +1,16 @@
-# 환경 변수 파일
-.env
-
-# Python 가상환경 및 캐시 파일
-venv/
+# Byte-compiled / optimized / DLL files
 __pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+
+# Streamlit secrets
+.streamlit/secrets.toml
