@@ -85,10 +85,13 @@ def get_ai_response(history):
                 else:
                     raise ValueError("Invalid response structure from API.")
         except Exception as e:
-            # 환경 문제로 인한 오류가 반복되므로, 사용자에게 노출되는 메시지는 간결하게 처리합니다.
+            # 디버깅을 위해 실제 오류를 터미널에 출력합니다.
+            st.error(f"An error occurred: {e}")
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
             else:
+                # 최종 실패 시에도 터미널에 로그를 남깁니다.
+                st.error("API call failed after multiple retries.")
                 return "죄송해요! 지금 Sinu 튜터가 잠시 아파서 대화를 이어갈 수가 없어요. 잠시 후에 다시 시도해 줄래? (API Error)"
     return response_text
 
@@ -137,12 +140,12 @@ def render_final_report_page():
     quiz_re_match = re.search(r'총 (\d+)문제 중 (\d+)문제를 맞혔습니다', report_text)
     guidance_re_match = re.search(r'문장 완성 지도가 (\d+)회 제공되었습니다', report_text)
     
-    total_questions = int(quiz_re_match.group(1)) if quiz_re_match else 4
+    # 안정성 강화: 정규표현식 매칭 실패 시 오류 대신 기본값(0)을 사용합니다.
+    total_questions = 4  # 퀴즈는 총 4문제로 고정
     correct_answers = int(quiz_re_match.group(2)) if quiz_re_match else 0
     guidance_count = int(guidance_re_match.group(1)) if guidance_re_match else 0
     
-    # 2. 보고서 텍스트 정리
-    remark_text = report_text.replace("## FINAL REPORT ##", "").strip()
+    remark_text = report_text.replace("## FINAL REPORT ##", "", 1).strip()
     remark_text = re.sub(r'총 \d+문제 중 \d+문제를 맞혔습니다.', '', remark_text).strip()
     remark_text = re.sub(r'자유 대화 중 문장 완성 지도가 \d+회 제공되었습니다.', '', remark_text).strip()
     
@@ -285,5 +288,3 @@ def app_main():
 
 if __name__ == "__main__":
     app_main()
-
-
